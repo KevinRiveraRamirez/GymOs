@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd gymos-frontend && npm install && npm run build",
+  "outputDirectory": "gymos-frontend/dist",
+  "framework": null
+}
