@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install --prefix gymos-frontend && npm run build --prefix gymos-frontend",
+  "buildCommand": "ls",
   "outputDirectory": "gymos-frontend/dist",
   "framework": null
 }
