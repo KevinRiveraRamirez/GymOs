@@ -444,38 +444,38 @@ function AlertListModal({ title, members, color, icon, type, onClose, onSelectMe
     const f = fmtDate(m.expires_at);
     const dias = diffDays(m.expires_at);
     const planMsg = {
-      Mensual:   { emoji:"💪", renovar:"para no perder continuidad" },
-      Bimensual: { emoji:"💪", renovar:"para no perder continuidad" },
-      Quincenal: { emoji:"🏋️", renovar:"a tiempo para seguir entrenando" },
-      Semanal:   { emoji:"🏋️", renovar:"a tiempo para seguir entrenando esta semana" },
-      Día:       { emoji:"😊", renovar:"cuando quieras" },
+      Mensual:   { renovar:"para no perder continuidad" },
+      Bimensual: { renovar:"para no perder continuidad" },
+      Quincenal: { renovar:"a tiempo para seguir entrenando" },
+      Semanal:   { renovar:"a tiempo para seguir entrenando esta semana" },
+      Día:       { renovar:"cuando quieras" },
     };
-    const pm = planMsg[m.plan] || { emoji:"💪", renovar:"a tiempo" };
+    const pm = planMsg[m.plan] || { renovar:"a tiempo" };
 
     if(type==="overdue"){
-      return encodeURIComponent(`Hola ${n} 👋
+      return encodeURIComponent(`Hola ${n}!
 
-Te recordamos que tu membresía *${m.plan}* venció el *${f}*.
+Te recordamos que tu membresia *${m.plan}* vencio el *${f}*.
 
-Para seguir disfrutando del gimnasio, podés renovarla ${pm.renovar}. ${pm.emoji}
+Para seguir disfrutando del gimnasio, podes renovarla ${pm.renovar}.
 
 _GymOS_`);
     }
     if(type==="today"){
-      return encodeURIComponent(`Hola ${n} 👋
+      return encodeURIComponent(`Hola ${n}!
 
-⚠️ Tu membresía *${m.plan}* vence *HOY*.
+Tu membresia *${m.plan}* vence *HOY*.
 
-Acercate al gimnasio para renovarla y no perder acceso. ${pm.emoji}
+Acercate al gimnasio para renovarla y no perder acceso.
 
 _GymOS_`);
     }
     // soon
-    return encodeURIComponent(`Hola ${n} 👋
+    return encodeURIComponent(`Hola ${n}!
 
-Te avisamos que tu membresía *${m.plan}* vence el *${f}* (en *${dias} día${dias!==1?"s":""}*).
+Te avisamos que tu membresia *${m.plan}* vence el *${f}* (en *${dias} dia${dias!==1?"s":""}*).
 
-Renovála ${pm.renovar}. ${pm.emoji}
+Renovala ${pm.renovar}.
 
 _GymOS_`);
     return encodeURIComponent(`Hola ${n} 👋
