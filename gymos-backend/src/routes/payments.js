@@ -5,7 +5,7 @@ const { auth } = require("../middleware/auth");
 const router = express.Router();
 router.use(auth);
 
-const PLAN_DAYS = { Mensual: 30, Semanal: 7, "Día": 1 };
+const PLAN_DAYS = { "Día": 1, Semanal: 7, Quincenal: 15, Mensual: 30, Bimensual: 60 };
 
 // Fecha de hoy en hora de Costa Rica
 const CR_TODAY = `(NOW() AT TIME ZONE 'America/Costa_Rica')::date`;
@@ -17,17 +17,16 @@ router.get("/", async (req, res) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
 
   let dateFilter = "";
-  if (period === "day")   dateFilter = `AND (paid_at AT TIME ZONE 'America/Costa_Rica')::date = ${CR_TODAY}`;
-  if (period === "week")  dateFilter = `AND (paid_at AT TIME ZONE 'America/Costa_Rica')::date >= DATE_TRUNC('week', ${CR_TODAY})`;
-  if (period === "month") dateFilter = `AND (paid_at AT TIME ZONE 'America/Costa_Rica')::date >= DATE_TRUNC('month', ${CR_TODAY})`;
+  if (period === "day")   dateFilter = `AND paid_at = ${CR_TODAY}`;
+  if (period === "week")  dateFilter = `AND paid_at >= DATE_TRUNC('week', ${CR_TODAY})`;
+  if (period === "month") dateFilter = `AND paid_at >= DATE_TRUNC('month', ${CR_TODAY})`;
 
   const methodFilter = method ? `AND method = '${method}'` : "";
 
   try {
     const result = await pool.query(`
       SELECT id, member_id, member_name, cedula, plan, amount, method, discount, type,
-             paid_at,
-             created_at
+             paid_at, created_at
       FROM payments
       WHERE gym_id = $1 ${dateFilter} ${methodFilter}
       ORDER BY created_at DESC
@@ -46,12 +45,12 @@ router.get("/report", async (req, res) => {
   const { period = "day" } = req.query;
   const gymId = req.user.gymId;
 
-let dateFilter = `paid_at = CURRENT_DATE`;
-  if (period === "week")  dateFilter = `(paid_at AT TIME ZONE 'America/Costa_Rica')::date >= DATE_TRUNC('week', ${CR_TODAY})`;
-  if (period === "month") dateFilter = `(paid_at AT TIME ZONE 'America/Costa_Rica')::date >= DATE_TRUNC('month', ${CR_TODAY})`;
+  let dateFilter = `paid_at = ${CR_TODAY}`;
+  if (period === "week")  dateFilter = `paid_at >= DATE_TRUNC('week', ${CR_TODAY})`;
+  if (period === "month") dateFilter = `paid_at >= DATE_TRUNC('month', ${CR_TODAY})`;
 
   try {
-    const [totalsRes, byMethodRes, byPlanRes, listRes] = await Promise.all([
+    const [totalsRes, byMethodRes, byPlanRes] = await Promise.all([
       pool.query(`
         SELECT COUNT(*) AS transactions, COALESCE(SUM(amount),0) AS total,
                COUNT(*) FILTER (WHERE type='visitor') AS visitors
@@ -67,24 +66,20 @@ let dateFilter = `paid_at = CURRENT_DATE`;
         FROM payments WHERE gym_id=$1 AND ${dateFilter}
         GROUP BY plan ORDER BY total DESC
       `, [gymId]),
-      pool.query(`
-        SELECT id, member_name, cedula, plan, amount, method, discount, type,
-               (paid_at AT TIME ZONE 'America/Costa_Rica')::date AS paid_at
-        FROM payments WHERE gym_id=$1 AND ${dateFilter}
-        ORDER BY created_at DESC
-      `, [gymId])
     ]);
 
     res.json({
-      period,
-      summary: totalsRes.rows[0],
-      byMethod: byMethodRes.rows,
-      byPlan:   byPlanRes.rows,
-      payments: listRes.rows
+      summary: {
+        total: Number(totalsRes.rows[0].total),
+        transactions: Number(totalsRes.rows[0].transactions),
+        visitors: Number(totalsRes.rows[0].visitors),
+      },
+      byMethod: byMethodRes.rows.map(r=>({ method:r.method, count:Number(r.count), total:Number(r.total) })),
+      byPlan:   byPlanRes.rows.map(r=>({ plan:r.plan, count:Number(r.count), total:Number(r.total) })),
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Error al generar reporte" });
+    res.status(500).json({ error: "Error al obtener reporte" });
   }
 });
 
@@ -100,26 +95,28 @@ router.post("/", async (req, res) => {
   if (!finalAmount || finalAmount <= 0)
     return res.status(400).json({ error: "Monto inválido" });
 
+  const days = PLAN_DAYS[plan] || 30;
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
- const payRes = await client.query(`
-  INSERT INTO payments
-    (gym_id, member_id, member_name, cedula, plan, amount, method, discount, type, created_by, paid_at)
-  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, (NOW() AT TIME ZONE 'America/Costa_Rica')::date)
-  RETURNING *,
-    (paid_at AT TIME ZONE 'America/Costa_Rica')::date AS paid_at
-`, [gymId, memberId||null, memberName, cedula||null, plan,
-    finalAmount, method, parseInt(discount), type, req.user.userId]);
+    // Insertar pago
+    const payRes = await client.query(`
+      INSERT INTO payments
+        (gym_id, member_id, member_name, cedula, plan, amount, method, discount, type, created_by, paid_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, (NOW() AT TIME ZONE 'America/Costa_Rica')::date)
+      RETURNING *
+    `, [gymId, memberId||null, memberName, cedula||null, plan,
+        finalAmount, method, parseInt(discount), type, req.user.userId]);
 
-    // Renovar membresía automáticamente al pagar
+    // Renovar membresía: extender desde vencimiento actual si aún vigente, o desde hoy si ya venció
+    // NUNCA modifica joined_at
     if (type === "member" && memberId) {
-      const days = PLAN_DAYS[plan] || 30;
       await client.query(`
         UPDATE members
         SET status = 'active',
-            expires_at = ${CR_TODAY} + $1::interval,
+            expires_at = GREATEST(expires_at, ${CR_TODAY}) + $1::interval,
             updated_at = NOW()
         WHERE id = $2 AND gym_id = $3
       `, [`${days} days`, memberId, gymId]);

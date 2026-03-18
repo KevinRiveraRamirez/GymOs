@@ -799,7 +799,7 @@ export default function Dashboard() {
 
   // ── ACTIONS ───────────────────────────────────────────────────────────────
   const saveMember = async(form)=>{
-    if(editMember){ await api.put(`/members/${editMember.id}`,{name:form.name,phone:form.phone,plan:form.plan,familyGroup:form.familyGroup,notes:form.notes}); showToast("✏️ Cambios guardados"); }
+    if(editMember){ await api.put(`/members/${editMember.id}`,{name:form.name,phone:form.phone,plan:form.plan,joinedAt:form.joinedAt,familyGroup:form.familyGroup,notes:form.notes}); showToast("✏️ Cambios guardados"); }
     else { await api.post("/members",form); showToast(`✅ ${form.name} registrado`); }
     setEditMember(null); loadMembers(); loadAlerts();
   };
