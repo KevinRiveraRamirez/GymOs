@@ -33,9 +33,17 @@ const T = {
 };
 
 const PLAN_META = {
-  Mensual:{ color:"#6366f1", bg:"#eef2ff" },
-  Semanal:{ color:"#0891b2", bg:"#e0f2fe" },
-  "Día":  { color:"#d97706", bg:"#fef3c7" },
+  "Día":      { color:"#d97706", bg:"#fef3c7" },
+  Semanal:    { color:"#0891b2", bg:"#e0f2fe" },
+  Quincenal:  { color:"#059669", bg:"#d1fae5" },
+  Mensual:    { color:"#6366f1", bg:"#eef2ff" },
+  Bimensual:  { color:"#7c3aed", bg:"#ede9fe" },
+};
+const PLAN_DAYS = { "Día":1, Semanal:7, Quincenal:15, Mensual:30, Bimensual:60 };
+const calcExpiry = (joinedAt, plan) => {
+  const d = new Date(String(joinedAt).slice(0,10)+"T12:00:00");
+  d.setDate(d.getDate() + (PLAN_DAYS[plan]||30));
+  return d.toISOString().slice(0,10);
 };
 const AVATAR_COLORS = ["#7c3aed","#0891b2","#d97706","#059669","#db2777","#2563eb","#0f766e","#b45309"];
 const avatarColor = (s="") => AVATAR_COLORS[(s.charCodeAt(0)+(s.charCodeAt(1)||0))%AVATAR_COLORS.length];
@@ -155,14 +163,23 @@ function MemberSearch({ members, onSelect, placeholder="Nombre o cédula..." }) 
 function MemberModal({ member, onClose, onSave }) {
   const editing = !!member;
   const [form, setForm] = useState(member
-    ? { cedula:member.cedula, name:member.name, phone:member.phone||"", plan:member.plan, familyGroup:member.family_group||"", notes:member.notes||"" }
-    : { cedula:"", name:"", phone:"", plan:"Mensual", familyGroup:"", notes:"" });
+    ? { cedula:member.cedula, name:member.name, phone:member.phone||"", plan:member.plan,
+        joinedAt:member.joined_at?String(member.joined_at).slice(0,10):todayStr(),
+        familyGroup:member.family_group||"", notes:member.notes||"" }
+    : { cedula:"", name:"", phone:"", plan:"Mensual", joinedAt:todayStr(), familyGroup:"", notes:"" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const set = (k,v)=>setForm(f=>({...f,[k]:v}));
+
+  const handlePlanChange = (p) => {
+    set("plan", p);
+  };
+
+  const expiryPreview = form.joinedAt ? calcExpiry(form.joinedAt, form.plan) : "";
+
   const handleSave = async()=>{
     setLoading(true); setError("");
-    try { await onSave(form); onClose(); }
+    try { await onSave({...form}); onClose(); }
     catch(e){ setError(e.response?.data?.error||"Error al guardar"); }
     finally{ setLoading(false); }
   };
@@ -176,14 +193,22 @@ function MemberModal({ member, onClose, onSave }) {
       <input placeholder="Juan Pérez Mora" value={form.name} onChange={e=>set("name",e.target.value)} style={iStyle}/>
       <Lbl>TELÉFONO</Lbl>
       <input placeholder="8888-0000" value={form.phone} onChange={e=>set("phone",e.target.value)} style={iStyle}/>
+      <Lbl>FECHA DE INGRESO *</Lbl>
+      <input type="date" value={form.joinedAt} onChange={e=>set("joinedAt",e.target.value)} style={iStyle}/>
+      {expiryPreview && (
+        <div style={{ background:T.greenBg, border:`1px solid #86efac`, borderRadius:8, padding:"8px 12px",
+          marginBottom:14, fontSize:12, color:T.green, fontWeight:600 }}>
+          📅 Vencimiento calculado: {fmtDate(expiryPreview)}
+        </div>
+      )}
       <Lbl>PLAN</Lbl>
-      <div style={{ display:"flex", gap:8, marginBottom:14 }}>
-        {["Mensual","Semanal","Día"].map(p=>(
-          <button key={p} onClick={()=>set("plan",p)} style={{
-            flex:1, padding:"10px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
-            border:`2px solid ${form.plan===p?PLAN_META[p].color:T.border2}`,
-            background:form.plan===p?PLAN_META[p].bg:T.surface,
-            color:form.plan===p?PLAN_META[p].color:T.text2, fontSize:12, fontWeight:700
+      <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+        {["Día","Semanal","Quincenal","Mensual","Bimensual"].map(p=>(
+          <button key={p} onClick={()=>handlePlanChange(p)} style={{
+            flex:1, minWidth:80, padding:"9px 6px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
+            border:`2px solid ${form.plan===p?(PLAN_META[p]?.color||T.accent):T.border2}`,
+            background:form.plan===p?(PLAN_META[p]?.bg||T.accentBg):T.surface,
+            color:form.plan===p?(PLAN_META[p]?.color||T.accent):T.text2, fontSize:11, fontWeight:700
           }}>{p}</button>
         ))}
       </div>
@@ -210,7 +235,7 @@ function PaymentModal({ members, onClose, onSave }) {
   const [discount, setDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const SUGGESTED = { Mensual:15000, Semanal:5000, "Día":1000 };
+  const SUGGESTED = { "Día":1000, Semanal:5000, Quincenal:7500, Mensual:15000, Bimensual:28000 };
   const handleSelect = (m)=>{ setSelMember(m); if(m) setAmount(String(SUGGESTED[m.plan]||"")); };
   const raw = parseInt(amount)||0;
   const disc = Math.round(raw*discount/100);
@@ -418,60 +443,39 @@ function AlertListModal({ title, members, color, icon, type, onClose, onSelectMe
     const n = m.name.split(" ")[0];
     const f = fmtDate(m.expires_at);
     const dias = diffDays(m.expires_at);
+    const planMsg = {
+      Mensual:   { emoji:"💪", renovar:"para no perder continuidad" },
+      Bimensual: { emoji:"💪", renovar:"para no perder continuidad" },
+      Quincenal: { emoji:"🏋️", renovar:"a tiempo para seguir entrenando" },
+      Semanal:   { emoji:"🏋️", renovar:"a tiempo para seguir entrenando esta semana" },
+      Día:       { emoji:"😊", renovar:"cuando quieras" },
+    };
+    const pm = planMsg[m.plan] || { emoji:"💪", renovar:"a tiempo" };
+
     if(type==="overdue"){
-      if(m.plan==="Mensual") return encodeURIComponent(`Hola ${n} 👋
-
-Te recordamos que tu membresía *Mensual* venció el *${f}*.
-
-Para seguir disfrutando del gimnasio, podés renovarla cuando puedas. 💪
-
-_GymOS_`);
-      if(m.plan==="Semanal") return encodeURIComponent(`Hola ${n} 👋
-
-Tu membresía *Semanal* venció el *${f}*. ¡No te quedés sin entrenar!
-
-Renovála esta semana. 🏋️
-
-_GymOS_`);
       return encodeURIComponent(`Hola ${n} 👋
 
-Tu membresía venció el *${f}*. Cuando quieras podés volver. 😊
+Te recordamos que tu membresía *${m.plan}* venció el *${f}*.
+
+Para seguir disfrutando del gimnasio, podés renovarla ${pm.renovar}. ${pm.emoji}
 
 _GymOS_`);
     }
     if(type==="today"){
-      if(m.plan==="Mensual") return encodeURIComponent(`Hola ${n} 👋
-
-⚠️ Tu membresía *Mensual* vence *HOY*.
-
-Acercate al gimnasio para renovarla y no perder ni un día de entrenamiento. 💪
-
-_GymOS_`);
-      if(m.plan==="Semanal") return encodeURIComponent(`Hola ${n} 👋
-
-⚠️ Tu membresía *Semanal* vence *HOY*.
-
-Renovála hoy mismo para seguir entrenando esta semana. 🏋️
-
-_GymOS_`);
       return encodeURIComponent(`Hola ${n} 👋
 
-⚠️ Tu membresía vence *HOY*. ¡Renovála para no perder acceso! 💪
+⚠️ Tu membresía *${m.plan}* vence *HOY*.
+
+Acercate al gimnasio para renovarla y no perder acceso. ${pm.emoji}
 
 _GymOS_`);
     }
-    if(m.plan==="Mensual") return encodeURIComponent(`Hola ${n} 👋
+    // soon
+    return encodeURIComponent(`Hola ${n} 👋
 
-Te avisamos que tu membresía *Mensual* vence el *${f}* (en *${dias} día${dias!==1?"s":""}*).
+Te avisamos que tu membresía *${m.plan}* vence el *${f}* (en *${dias} día${dias!==1?"s":""}*).
 
-Podés renovarla antes de que venza para no perder continuidad. 💪
-
-_GymOS_`);
-    if(m.plan==="Semanal") return encodeURIComponent(`Hola ${n} 👋
-
-Tu membresía *Semanal* vence el *${f}* (en *${dias} día${dias!==1?"s":""}*).
-
-¡Renovála a tiempo para seguir entrenando! 🏋️
+Renovála ${pm.renovar}. ${pm.emoji}
 
 _GymOS_`);
     return encodeURIComponent(`Hola ${n} 👋
@@ -977,7 +981,7 @@ export default function Dashboard() {
         <select value={filterPlan} onChange={e=>setFilterPlan(e.target.value)} style={{ background:T.surface, border:`1.5px solid ${T.border2}`,
           borderRadius:9, padding:"8px 12px", color:T.text2, fontSize:11, outline:"none", fontFamily:"inherit" }}>
           <option value="all">Todos los planes</option>
-          {["Mensual","Semanal","Día"].map(p=><option key={p}>{p}</option>)}
+          {["Día","Semanal","Quincenal","Mensual","Bimensual"].map(p=><option key={p}>{p}</option>)}
         </select>
       </div>
       <div style={{ color:T.text3, fontSize:11, marginBottom:10 }}>{loadingData?"Buscando...":`${members.length} resultado${members.length!==1?"s":""}`}</div>

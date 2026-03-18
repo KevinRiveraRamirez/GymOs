@@ -5,10 +5,10 @@ const { auth, adminOnly } = require("../middleware/auth");
 const router = express.Router();
 router.use(auth);
 
-const PLAN_DAYS = { Mensual: 30, Semanal: 7, "Día": 1 };
+const PLAN_DAYS = { "Día": 1, Semanal: 7, Quincenal: 15, Mensual: 30, Bimensual: 60 };
 
-const expiresDate = (plan) => {
-  const d = new Date();
+const expiresDate = (plan, joinedAt) => {
+  const d = joinedAt ? new Date(joinedAt) : new Date();
   d.setDate(d.getDate() + (PLAN_DAYS[plan] || 30));
   return d.toISOString().split("T")[0];
 };
@@ -47,7 +47,8 @@ router.get("/", async (req, res) => {
 
     const [dataRes, countRes] = await Promise.all([
       pool.query(
-        `SELECT id, cedula, name, phone, plan, status, joined_at,
+        `SELECT id, cedula, name, phone, plan, status,
+                TO_CHAR(joined_at, 'YYYY-MM-DD')  AS joined_at,
                 TO_CHAR(expires_at, 'YYYY-MM-DD') AS expires_at,
                 family_group, notes, blocked, blacklist_reason, created_at
          FROM members WHERE ${where}
@@ -135,7 +136,7 @@ router.get("/:id", async (req, res) => {
 
 // ── POST /api/members ────────────────────────────────────────────────────────
 router.post("/", async (req, res) => {
-  const { cedula, name, phone, plan, familyGroup, notes } = req.body;
+  const { cedula, name, phone, plan, familyGroup, notes, joinedAt } = req.body;
   const gymId = req.user.gymId;
 
   if (!cedula || !name || !plan)
@@ -143,13 +144,16 @@ router.post("/", async (req, res) => {
   if (!PLAN_DAYS[plan])
     return res.status(400).json({ error: "Plan inválido" });
 
+  const joinedDate = joinedAt || new Date().toISOString().split("T")[0];
+
   try {
     const result = await pool.query(`
       INSERT INTO members
-        (gym_id, cedula, name, phone, plan, status, expires_at, family_group, notes, created_by)
-      VALUES ($1,$2,$3,$4,$5,'active',$6,$7,$8,$9)
+        (gym_id, cedula, name, phone, plan, status, joined_at, expires_at, family_group, notes, created_by)
+      VALUES ($1,$2,$3,$4,$5,'active',$6,$7,$8,$9,$10)
       RETURNING *
-    `, [gymId, cedula.trim(), name.trim(), phone, plan, expiresDate(plan),
+    `, [gymId, cedula.trim(), name.trim(), phone, plan,
+        joinedDate, expiresDate(plan, joinedDate),
         familyGroup || null, notes || null, req.user.userId]);
 
     res.status(201).json(result.rows[0]);
@@ -163,16 +167,24 @@ router.post("/", async (req, res) => {
 
 // ── PUT /api/members/:id ─────────────────────────────────────────────────────
 router.put("/:id", async (req, res) => {
-  const { name, phone, plan, familyGroup, notes } = req.body;
+  const { name, phone, plan, familyGroup, notes, joinedAt } = req.body;
   const gymId = req.user.gymId;
+
+  if (!PLAN_DAYS[plan])
+    return res.status(400).json({ error: "Plan inválido" });
+
+  const joinedDate = joinedAt || new Date().toISOString().split("T")[0];
+  const newExpiry = expiresDate(plan, joinedDate);
 
   try {
     const result = await pool.query(`
       UPDATE members
-      SET name=$1, phone=$2, plan=$3, family_group=$4, notes=$5, updated_at=NOW()
-      WHERE id=$6 AND gym_id=$7
+      SET name=$1, phone=$2, plan=$3, family_group=$4, notes=$5,
+          joined_at=$6, expires_at=$7, updated_at=NOW()
+      WHERE id=$8 AND gym_id=$9
       RETURNING *
-    `, [name, phone, plan, familyGroup || null, notes || null, req.params.id, gymId]);
+    `, [name, phone, plan, familyGroup || null, notes || null,
+        joinedDate, newExpiry, req.params.id, gymId]);
 
     if (!result.rows[0]) return res.status(404).json({ error: "Miembro no encontrado" });
     res.json(result.rows[0]);
