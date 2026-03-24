@@ -13,6 +13,15 @@ const expiresDate = (plan, joinedAt) => {
   return d.toISOString().split("T")[0];
 };
 
+// Status calculado en tiempo real — nunca depende del campo status guardado
+const STATUS_EXPR = `
+  CASE
+    WHEN blocked = true THEN 'blocked'
+    WHEN expires_at < CURRENT_DATE THEN 'inactive'
+    ELSE 'active'
+  END
+`;
+
 // ── GET /api/members ─────────────────────────────────────────────────────────
 router.get("/", async (req, res) => {
   const { search = "", status = "all", plan = "all", page = 1, limit = 50 } = req.query;
@@ -30,14 +39,18 @@ router.get("/", async (req, res) => {
       params.push(q, `%${search}%`, `%${search}%`);
       i += 3;
     }
+
+    // Filtrar por status calculado en tiempo real
     if (status !== "all") {
       if (status === "blocked") {
         conditions.push(`blocked = true`);
-      } else {
-        conditions.push(`status = $${i} AND blocked = false`);
-        params.push(status); i++;
+      } else if (status === "active") {
+        conditions.push(`blocked = false AND expires_at >= CURRENT_DATE`);
+      } else if (status === "inactive") {
+        conditions.push(`blocked = false AND expires_at < CURRENT_DATE`);
       }
     }
+
     if (plan !== "all") {
       conditions.push(`plan = $${i}`);
       params.push(plan); i++;
@@ -47,7 +60,8 @@ router.get("/", async (req, res) => {
 
     const [dataRes, countRes] = await Promise.all([
       pool.query(
-        `SELECT id, cedula, name, phone, plan, status,
+        `SELECT id, cedula, name, phone, plan,
+                ${STATUS_EXPR} AS status,
                 TO_CHAR(joined_at, 'YYYY-MM-DD')  AS joined_at,
                 TO_CHAR(expires_at, 'YYYY-MM-DD') AS expires_at,
                 family_group, notes, blocked, blacklist_reason, created_at
@@ -76,7 +90,8 @@ router.get("/alerts", async (req, res) => {
   const gymId = req.user.gymId;
   try {
     const result = await pool.query(`
-      SELECT id, cedula, name, phone, plan, status,
+      SELECT id, cedula, name, phone, plan,
+             ${STATUS_EXPR} AS status,
              TO_CHAR(expires_at, 'YYYY-MM-DD') AS expires_at
       FROM members
       WHERE gym_id = $1 AND blocked = false
@@ -104,7 +119,9 @@ router.get("/:id", async (req, res) => {
   try {
     const [memberRes, paymentsRes, attendanceRes] = await Promise.all([
       pool.query(
-        `SELECT id, cedula, name, phone, plan, status, blocked, blacklist_reason,
+        `SELECT id, cedula, name, phone, plan,
+                ${STATUS_EXPR} AS status,
+                blocked, blacklist_reason,
                 family_group, notes, created_at, updated_at,
                 TO_CHAR(joined_at, 'YYYY-MM-DD')  AS joined_at,
                 TO_CHAR(expires_at, 'YYYY-MM-DD') AS expires_at
@@ -201,11 +218,10 @@ router.patch("/:id/block", adminOnly, async (req, res) => {
   try {
     const result = await pool.query(`
       UPDATE members
-      SET blocked=$1, blacklist_reason=$2,
-          status = CASE WHEN $1 THEN 'inactive' ELSE status END,
-          updated_at=NOW()
+      SET blocked=$1, blacklist_reason=$2, updated_at=NOW()
       WHERE id=$3 AND gym_id=$4
-      RETURNING id, name, blocked, blacklist_reason, status
+      RETURNING id, name, blocked, blacklist_reason,
+        ${STATUS_EXPR} AS status
     `, [blocked, blacklistReason || null, req.params.id, gymId]);
 
     if (!result.rows[0]) return res.status(404).json({ error: "Miembro no encontrado" });

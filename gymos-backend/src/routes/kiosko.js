@@ -13,8 +13,13 @@ router.get("/search", async (req, res) => {
   try {
     const search = `%${q.trim().toLowerCase()}%`;
     const result = await pool.query(`
-      SELECT id, name, cedula, plan, status, blocked,
-             TO_CHAR(expires_at, 'YYYY-MM-DD') AS expires_at
+      SELECT id, name, cedula, plan, blocked,
+             TO_CHAR(expires_at, 'YYYY-MM-DD') AS expires_at,
+             CASE
+               WHEN blocked = true THEN 'blocked'
+               WHEN expires_at < CURRENT_DATE THEN 'inactive'
+               ELSE 'active'
+             END AS status
       FROM members
       WHERE gym_id = $1
         AND (LOWER(name) LIKE $2 OR cedula LIKE $3)
@@ -37,8 +42,13 @@ router.get("/member", async (req, res) => {
 
   try {
     const memberRes = await pool.query(`
-      SELECT id, name, cedula, plan, status, blocked, blacklist_reason,
-             TO_CHAR(expires_at, 'YYYY-MM-DD') AS expires_at
+      SELECT id, name, cedula, plan, blocked, blacklist_reason,
+             TO_CHAR(expires_at, 'YYYY-MM-DD') AS expires_at,
+             CASE
+               WHEN blocked = true THEN 'blocked'
+               WHEN expires_at < CURRENT_DATE THEN 'inactive'
+               ELSE 'active'
+             END AS status
       FROM members
       WHERE cedula = $1 AND gym_id = $2
     `, [cedula.trim(), parseInt(gymId)]);
