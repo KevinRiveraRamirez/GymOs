@@ -74,19 +74,39 @@ export default function Kiosko() {
     setState("found");
   };
 
-  const handleMarcar = async () => {
+  // Buscar si ya está dentro al seleccionar
+  const handleSelectWithCheck = useCallback(async (m) => {
+    setResults([]);
+    setQuery(m.name);
+    if (m.blocked) { setMember(m); setState("blocked"); scheduleReset(); return; }
     setState("searching");
     try {
-      await api.post(`/kiosko/attendance`, {
-        gymId: GYM_ID, memberId: member.id,
-        memberName: member.name, cedula: member.cedula, plan: member.plan,
-      });
-      setState("success"); setMessage(member.alreadyIn ? "ya_dentro" : "entrada_ok");
+      const today = new Date().toISOString().split("T")[0];
+      const r = await api.get(`/kiosko/inside?memberId=${m.id}&gymId=${GYM_ID}&date=${today}`);
+      setMember({ ...m, alreadyIn: r.data.inside, attendanceId: r.data.attendanceId });
+      setState("found");
+    } catch {
+      setMember({ ...m, alreadyIn: false });
+      setState("found");
+    }
+  }, [GYM_ID]);
+
+  const handleMarcar = async (tipo) => {
+    setState("searching");
+    try {
+      if (tipo === "salida") {
+        await api.patch(`/kiosko/attendance/${member.attendanceId}/exit`);
+        setState("success"); setMessage("salida_ok");
+      } else {
+        await api.post(`/kiosko/attendance`, {
+          gymId: GYM_ID, memberId: member.id,
+          memberName: member.name, cedula: member.cedula, plan: member.plan,
+        });
+        setState("success"); setMessage("entrada_ok");
+      }
       scheduleReset();
     } catch (e) {
-      const msg = e.response?.data?.error || "";
-      if (msg.includes("ya está dentro")) { setState("success"); setMessage("ya_dentro"); }
-      else { setState("error"); setMessage("error_servidor"); }
+      setState("error"); setMessage("error_servidor");
       scheduleReset();
     }
   };
@@ -169,7 +189,7 @@ export default function Kiosko() {
                   marginTop:4 }}>
                   {results.map(m => (
                     <div key={m.id} className="result-item"
-                      onClick={() => handleSelect(m)}
+                      onClick={() => handleSelectWithCheck(m)}
                       style={{ display:"flex", alignItems:"center", gap:12,
                         padding:"12px 16px", cursor:"pointer", borderBottom:"1px solid #1e293b",
                         background:"transparent", transition:"background 0.15s" }}>
@@ -245,25 +265,49 @@ export default function Kiosko() {
               }}>{member.status==="active" ? "Activo" : "Vencido"}</span>
             </div>
 
-            {member.status !== "active" && (
-              <div style={{ background:"#dc262618", border:"1px solid #dc262644",
-                borderRadius:12, padding:"10px 14px", marginBottom:16, color:"#f87171", fontSize:13 }}>
-                Tu membresia vencio el {fmtDate(member.expires_at)}. Acercate a recepcion para renovarla.
+            {member.status !== "active" ? (
+              <>
+                <div style={{ background:"#dc262618", border:"1px solid #dc262644",
+                  borderRadius:16, padding:"20px", marginBottom:16, textAlign:"center" }}>
+                  <div style={{ fontSize:40, marginBottom:10 }}>⚠️</div>
+                  <div style={{ color:"#f87171", fontWeight:800, fontSize:16, marginBottom:6 }}>
+                    Membresia Vencida
+                  </div>
+                  <div style={{ color:"#fca5a5", fontSize:13, marginBottom:4 }}>
+                    Vencio el {fmtDate(member.expires_at)}
+                  </div>
+                  <div style={{ color:"#fca5a5", fontSize:13 }}>
+                    Acercate a recepcion para renovar tu plan y continuar entrenando.
+                  </div>
+                </div>
+                <button onClick={reset} style={{ width:"100%", padding:"13px", borderRadius:12,
+                  border:"1px solid #334155", background:"#1e293b", color:"#94a3b8",
+                  fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                  Volver
+                </button>
+              </>
+            ) : (
+              <div style={{ display:"flex", gap:10 }}>
+                <button onClick={reset} style={{ flex:1, padding:"13px", borderRadius:12,
+                  border:"1px solid #334155", background:"#1e293b", color:"#94a3b8",
+                  fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                  Cancelar
+                </button>
+                {member.alreadyIn ? (
+                  <button onClick={()=>handleMarcar("salida")} style={{ flex:2, padding:"13px", borderRadius:12,
+                    border:"none", background:"linear-gradient(135deg,#d97706,#fbbf24)",
+                    color:"#fff", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
+                    Marcar Salida
+                  </button>
+                ) : (
+                  <button onClick={()=>handleMarcar("entrada")} style={{ flex:2, padding:"13px", borderRadius:12,
+                    border:"none", background:"linear-gradient(135deg,#059669,#34d399)",
+                    color:"#fff", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
+                    Marcar Entrada
+                  </button>
+                )}
               </div>
             )}
-
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={reset} style={{ flex:1, padding:"13px", borderRadius:12,
-                border:"1px solid #334155", background:"#1e293b", color:"#94a3b8",
-                fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
-                Cancelar
-              </button>
-              <button onClick={handleMarcar} style={{ flex:2, padding:"13px", borderRadius:12,
-                border:"none", background:"linear-gradient(135deg,#059669,#34d399)",
-                color:"#fff", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
-                Marcar Entrada
-              </button>
-            </div>
           </div>
         )}
 
@@ -271,7 +315,7 @@ export default function Kiosko() {
         {state === "success" && (
           <div className="fade pulse" style={{ textAlign:"center" }}>
             <div style={{ fontSize:72, marginBottom:16 }}>
-              {message === "ya_dentro" ? "✋" : "✅"}
+              {message === "salida_ok" ? "👋" : message === "ya_dentro" ? "✋" : "✅"}
             </div>
             {member && (
               <div style={{ width:72, height:72, borderRadius:"50%", background:avatarColor(member.name),
@@ -281,10 +325,14 @@ export default function Kiosko() {
               </div>
             )}
             <h2 style={{ fontSize:24, fontWeight:900, color:"#fff", marginBottom:8 }}>
-              {message === "ya_dentro" ? "Ya estas registrado!" : `Hola, ${member?.name.split(" ")[0]}!`}
+              {message === "salida_ok" ? `Hasta luego, ${member?.name.split(" ")[0]}!` :
+               message === "ya_dentro" ? "Ya estas registrado!" :
+               `Hola, ${member?.name.split(" ")[0]}!`}
             </h2>
             <p style={{ color:"#34d399", fontSize:17, fontWeight:600, marginBottom:20 }}>
-              {message === "ya_dentro" ? "Ya marcaste tu entrada hoy. A entrenar!" : "Entrada registrada. Buen entrenamiento!"}
+              {message === "salida_ok" ? "Salida registrada. Hasta la proxima!" :
+               message === "ya_dentro" ? "Ya marcaste tu entrada hoy. A entrenar!" :
+               "Entrada registrada. Buen entrenamiento!"}
             </p>
             <div style={{ background:"#05966918", border:"1px solid #05966944",
               borderRadius:12, padding:"12px", color:"#6ee7b7", fontSize:13 }}>

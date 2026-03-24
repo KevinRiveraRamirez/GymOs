@@ -60,6 +60,50 @@ router.get("/member", async (req, res) => {
   }
 });
 
+// ── GET /api/kiosko/inside?memberId=...&gymId=...&date=... ───────────────────────
+// Verifica si un miembro ya está dentro del gimnasio hoy
+router.get("/inside", async (req, res) => {
+  const { memberId, gymId, date } = req.query;
+  if (!memberId || !gymId) return res.status(400).json({ error: "Datos incompletos" });
+
+  try {
+    const today = date || new Date().toISOString().split("T")[0];
+    const result = await pool.query(`
+      SELECT id FROM attendance
+      WHERE member_id = $1 AND gym_id = $2 AND date = $3 AND exit_at IS NULL
+    `, [parseInt(memberId), parseInt(gymId), today]);
+
+    res.json({
+      inside: result.rows.length > 0,
+      attendanceId: result.rows[0]?.id || null
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error del servidor" });
+  }
+});
+
+// ── PATCH /api/kiosko/attendance/:id/exit ────────────────────────────────────
+// Marca salida desde el kiosko
+router.patch("/attendance/:id/exit", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      UPDATE attendance
+      SET exit_at = NOW()
+      WHERE id = $1 AND exit_at IS NULL
+      RETURNING id
+    `, [req.params.id]);
+
+    if (!result.rows[0])
+      return res.status(404).json({ error: "Registro no encontrado" });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al registrar salida" });
+  }
+});
+
 // ── POST /api/kiosko/attendance ───────────────────────────────────────────────
 router.post("/attendance", async (req, res) => {
   const { gymId, memberId, memberName, cedula, plan } = req.body;
