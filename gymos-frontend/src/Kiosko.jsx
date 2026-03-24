@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import api from "./api";
 
-const GYM_ID = 2;
 const RESET_DELAY = 4000;
 
 const initials = (name="?") => name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
@@ -18,6 +18,8 @@ const PLAN_COLORS = {
 };
 
 export default function Kiosko() {
+  const { gymId = "2" } = useParams();
+  const GYM_ID = parseInt(gymId);
   const [query, setQuery]       = useState("");
   const [results, setResults]   = useState([]);
   const [state, setState]       = useState("idle"); // idle | searching | found | success | error | blocked
