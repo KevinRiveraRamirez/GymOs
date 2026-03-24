@@ -1,7 +1,11 @@
-# 🏋️ GymOS — Sistema de Administración de Gimnasio (SaaS)
+# 💪 GymOS — Sistema de Administración de Gimnasio (SaaS)
 
 > Sistema web multi-tenant para digitalizar la gestión de gimnasios pequeños y medianos.  
 > Stack: **React + Node.js + Express + PostgreSQL (Supabase)**
+
+🌐 **Producción:** https://gym-os-qtw7.vercel.app  
+⚙️ **API:** https://gymos-production.up.railway.app  
+📱 **Kiosko tablet:** https://gym-os-qtw7.vercel.app/kiosko/:gymId
 
 ---
 
@@ -9,27 +13,33 @@
 
 1. [Descripción general](#descripción-general)
 2. [Arquitectura](#arquitectura)
-3. [Estructura de carpetas](#estructura-de-carpetas)
-4. [Base de datos](#base-de-datos)
-5. [API — Endpoints](#api--endpoints)
-6. [Frontend — Módulos](#frontend--módulos)
-7. [Autenticación](#autenticación)
-8. [Variables de entorno](#variables-de-entorno)
-9. [Instalación local](#instalación-local)
-10. [Despliegue en producción](#despliegue-en-producción)
-11. [Modelo SaaS y multi-tenancy](#modelo-saas-y-multi-tenancy)
-12. [Decisiones técnicas](#decisiones-técnicas)
+3. [Tecnologías](#tecnologías)
+4. [Estructura de carpetas](#estructura-de-carpetas)
+5. [Base de datos](#base-de-datos)
+6. [API — Endpoints](#api--endpoints)
+7. [Frontend — Módulos](#frontend--módulos)
+8. [Pantalla Kiosko](#pantalla-kiosko)
+9. [Autenticación y Seguridad](#autenticación-y-seguridad)
+10. [Variables de entorno](#variables-de-entorno)
+11. [Instalación local](#instalación-local)
+12. [Despliegue en producción](#despliegue-en-producción)
+13. [Flujo Git → Producción](#flujo-git--producción)
+14. [Modelo SaaS y multi-tenancy](#modelo-saas-y-multi-tenancy)
+15. [Decisiones técnicas](#decisiones-técnicas)
 
 ---
 
 ## Descripción general
 
 GymOS permite a los administradores de gimnasios gestionar:
-- **Miembros** — registro, edición, bloqueo, eliminación
-- **Asistencia** — control de entrada y salida diaria
-- **Pagos** — registro de SINPE y Efectivo con descuentos
+
+- **Miembros** — registro, edición, bloqueo, eliminación con 5 planes disponibles
+- **Asistencia** — control de entrada y salida diaria desde el panel admin o desde la tablet kiosko
+- **Pagos** — registro de SINPE y Efectivo con descuentos configurables
 - **Cierre de caja** — reportes por día, semana y mes descargables en PDF
-- **Alertas** — notificaciones de membresías próximas a vencer con envío por WhatsApp
+- **Alertas** — notificaciones de membresías próximas a vencer (≤3 días) con envío por WhatsApp
+- **Lista negra** — bloqueo de miembros con registro de razón
+- **Kiosko tablet** — pantalla dedicada para que los miembros marquen su propia asistencia
 
 El sistema es **multi-tenant**: cada gimnasio tiene sus datos completamente aislados mediante `gym_id` en todas las tablas.
 
@@ -38,77 +48,123 @@ El sistema es **multi-tenant**: cada gimnasio tiene sus datos completamente aisl
 ## Arquitectura
 
 ```
-Cliente (navegador)
-        │
-        ▼
-React Frontend (Vite)  ─────────────►  Node.js + Express API
-     puerto 5173                              puerto 3001
-                                                   │
-                                                   ▼
-                                         PostgreSQL (Supabase)
-                                         Session Pooler — SSL
+Tablet Kiosko ──────────────────────────────────────────┐
+                                                         │
+Navegador (Admin) ──► React Frontend (Vercel) ──► Node.js + Express (Railway)
+                                                         │
+                                                         ▼
+                                               PostgreSQL (Supabase)
+                                               Session Pooler — SSL
 ```
 
-- El frontend se comunica con el backend vía `axios` apuntando a `http://localhost:3001/api`
-- El backend se conecta a Supabase usando el **Session Pooler** con SSL habilitado
-- Toda autenticación es por **JWT** firmado con `JWT_SECRET`
+- El frontend se comunica con el backend vía `axios` con interceptor JWT automático
+- El backend se conecta a Supabase usando el **Session Pooler** para compatibilidad IPv4
+- Toda autenticación es por **JWT** firmado con `JWT_SECRET` (expiración 8h)
+- El kiosko usa endpoints públicos sin JWT, filtrados por `gymId` en la URL
+
+---
+
+## Tecnologías
+
+### Frontend
+| Tecnología | Versión | Uso |
+|-----------|---------|-----|
+| React | 19 | Biblioteca principal de UI |
+| Vite | 7 | Bundler y servidor de desarrollo |
+| React Router DOM | 7 | Rutas SPA (Login, Dashboard, Kiosko) |
+| Axios | 1.13 | Cliente HTTP con interceptor JWT |
+| jsPDF | 2.5 | Generación de PDFs de cierre de caja en el cliente |
+
+### Backend
+| Tecnología | Versión | Uso |
+|-----------|---------|-----|
+| Node.js | 22 | Runtime |
+| Express | 4 | Framework web API REST |
+| bcryptjs | — | Hash de contraseñas (12 rounds) |
+| jsonwebtoken | — | JWT generación y verificación |
+| pg | — | Cliente PostgreSQL con pool de conexiones |
+| express-rate-limit | — | Protección fuerza bruta en login |
+| cors | — | Whitelist de dominios permitidos |
+
+### Infraestructura
+| Servicio | Plan | Uso |
+|---------|------|-----|
+| Supabase | Gratuito (500MB) | PostgreSQL en la nube |
+| Railway | Hobby | Hosting del backend Node.js |
+| Vercel | Hobby | Hosting del frontend React |
+| GitHub | Público | Control de versiones |
 
 ---
 
 ## Estructura de carpetas
 
 ```
-gymos-backend/
-├── src/
-│   ├── index.js                  # Servidor Express principal
-│   ├── db/
-│   │   ├── pool.js               # Conexión PostgreSQL con SSL
-│   │   ├── migrate.js            # Crea las 5 tablas del sistema
-│   │   ├── migrate_exit.js       # Agrega columna exit_at a attendance
-│   │   └── seed.js               # Datos de prueba (gym + admin + miembros)
-│   ├── middleware/
-│   │   └── auth.js               # Verificación JWT + middleware adminOnly
-│   └── routes/
-│       ├── auth.js               # Login, perfil, cambio de contraseña
-│       ├── members.js            # CRUD miembros + alertas
-│       ├── payments.js           # Pagos + reporte de cierre de caja
-│       ├── attendance.js         # Asistencia diaria + estadísticas
-│       └── gyms.js               # Registro SaaS + gestión de staff
+GymOs/
+├── gymos-backend/
+│   ├── src/
+│   │   ├── index.js              # Servidor Express — middlewares y rutas
+│   │   ├── db/
+│   │   │   ├── pool.js           # Conexión PostgreSQL con SSL
+│   │   │   ├── migrate.js        # Crea las 5 tablas del sistema
+│   │   │   ├── migrate_exit.js   # Agrega columna exit_at a attendance
+│   │   │   └── seed.js           # Datos de prueba
+│   │   ├── middleware/
+│   │   │   └── auth.js           # JWT verification + adminOnly
+│   │   └── routes/
+│   │       ├── auth.js           # Login, perfil, contraseña
+│   │       ├── members.js        # CRUD miembros + alertas
+│   │       ├── payments.js       # Pagos + cierre de caja
+│   │       ├── attendance.js     # Asistencia + estadísticas
+│   │       ├── gyms.js           # Registro SaaS + staff
+│   │       └── kiosko.js         # Endpoints públicos para tablet kiosko
+│   └── package.json
 │
-gymos-frontend/
-└── src/
-    ├── main.jsx                  # Punto de entrada React
-    ├── App.jsx                   # Router principal (Login / Dashboard)
-    ├── AuthContext.jsx           # Contexto de autenticación global
-    ├── api.js                    # Instancia axios con interceptor JWT
-    └── Dashboard.jsx             # Toda la UI del sistema (componente principal)
+├── gymos-frontend/
+│   ├── src/
+│   │   ├── main.jsx              # Punto de entrada React
+│   │   ├── App.jsx               # Router: Login / Dashboard / Kiosko
+│   │   ├── AuthContext.jsx       # Contexto de autenticación global
+│   │   ├── api.js                # Axios con interceptor JWT
+│   │   ├── Login.jsx             # Pantalla de login
+│   │   ├── Dashboard.jsx         # UI completa del panel admin
+│   │   └── Kiosko.jsx            # Pantalla tablet de asistencia
+│   ├── dist/                     # Build de producción (generado con npm run build)
+│   └── package.json
+│
+├── vercel.json                   # Config Vercel — outputDirectory + rewrites SPA
+└── README.md
 ```
 
 ---
 
 ## Base de datos
 
-### Tablas
-
-#### `gyms`
+### `gyms` — Gimnasios registrados
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | id | SERIAL PK | Identificador único |
 | name | VARCHAR | Nombre del gimnasio |
-| email | VARCHAR UNIQUE | Email de contacto |
+| slug | VARCHAR | Identificador URL-friendly |
+| owner_name | VARCHAR | Nombre del dueño |
+| owner_email | VARCHAR | Email del dueño |
+| country_code | VARCHAR | Código de país (CR) |
+| plan | VARCHAR | Plan SaaS contratado |
+| active | BOOLEAN | Si el gimnasio está activo |
 | created_at | TIMESTAMP | Fecha de registro |
 
-#### `users`
+### `users` — Usuarios con acceso al sistema
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | id | SERIAL PK | Identificador único |
 | gym_id | INTEGER FK | Gimnasio al que pertenece |
-| email | VARCHAR UNIQUE | Email de login |
-| password_hash | VARCHAR | Contraseña hasheada con bcrypt |
-| role | VARCHAR | `admin` o `staff` |
 | name | VARCHAR | Nombre del usuario |
+| email | VARCHAR UNIQUE | Email de login |
+| password | VARCHAR | Contraseña hasheada (bcrypt 12 rounds) |
+| role | VARCHAR | `admin` o `staff` |
+| active | BOOLEAN | Si el usuario está activo |
+| last_login | TIMESTAMP | Último inicio de sesión |
 
-#### `members`
+### `members` — Miembros del gimnasio
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | id | SERIAL PK | Identificador único |
@@ -116,16 +172,16 @@ gymos-frontend/
 | cedula | VARCHAR | Número de cédula (único por gym) |
 | name | VARCHAR | Nombre completo |
 | phone | VARCHAR | Teléfono (para WhatsApp) |
-| plan | VARCHAR | `Mensual`, `Semanal`, o `Día` |
+| plan | VARCHAR | `Día`, `Semanal`, `Quincenal`, `Mensual`, `Bimensual` |
 | status | VARCHAR | `active` o `inactive` |
-| expires_at | DATE | Fecha de vencimiento del plan |
-| joined_at | TIMESTAMP | Fecha de ingreso |
+| joined_at | DATE | **Fecha de ingreso editable por el admin** |
+| expires_at | DATE | Vencimiento calculado automáticamente desde joined_at + días del plan |
 | blocked | BOOLEAN | Si está en lista negra |
 | blacklist_reason | VARCHAR | Razón del bloqueo |
 | family_group | VARCHAR | Grupo familiar (opcional) |
 | notes | TEXT | Notas internas |
 
-#### `payments`
+### `payments` — Registro de pagos
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | id | SERIAL PK | Identificador único |
@@ -140,7 +196,7 @@ gymos-frontend/
 | paid_at | DATE | Fecha del pago (zona horaria CR) |
 | created_by | INTEGER FK | Usuario que registró el pago |
 
-#### `attendance`
+### `attendance` — Control de asistencia
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | id | SERIAL PK | Identificador único |
@@ -150,110 +206,153 @@ gymos-frontend/
 | plan | VARCHAR | Plan al momento de entrada |
 | type | VARCHAR | `member` o `visitor` |
 | attended_at | TIMESTAMP | Timestamp de entrada |
-| exit_at | TIMESTAMP | Timestamp de salida (nullable) |
+| exit_at | TIMESTAMP | Timestamp de salida (nullable — null = dentro) |
 | date | DATE | Fecha del día (para filtros) |
-| created_by | INTEGER FK | Usuario que marcó la entrada |
+| created_by | INTEGER FK | Usuario que marcó (null si fue desde kiosko) |
 
 ---
 
 ## API — Endpoints
 
+**Base URL:** `https://gymos-production.up.railway.app/api`
+
 ### Autenticación
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| POST | `/api/auth/login` | Login con email + password → JWT |
-| GET | `/api/auth/me` | Perfil del usuario autenticado |
-| PUT | `/api/auth/password` | Cambiar contraseña |
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| POST | `/auth/login` | — | Login con email + password → JWT |
+| GET | `/auth/me` | JWT | Perfil del usuario autenticado |
+| PUT | `/auth/password` | JWT | Cambiar contraseña propia |
 
 ### Gimnasios
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| POST | `/api/gyms/register` | Registrar nuevo gimnasio (SaaS) |
-| GET | `/api/gyms/me` | Info del gimnasio actual |
-| GET | `/api/gyms/me/users` | Usuarios/staff del gimnasio |
-| POST | `/api/gyms/me/users` | Agregar staff |
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| POST | `/gyms/register` | — | Registrar nuevo gimnasio (SaaS) |
+| GET | `/gyms/me` | JWT | Info del gimnasio actual |
+| GET | `/gyms/me/users` | JWT | Usuarios/staff del gimnasio |
+| POST | `/gyms/me/users` | Admin | Agregar staff |
 
 ### Miembros
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/api/members` | Listar miembros (filtros: search, status, plan) |
-| GET | `/api/members/alerts` | Miembros próximos a vencer (≤3 días, excluye plan Día) |
-| GET | `/api/members/:id` | Detalle + historial de pagos y asistencia |
-| POST | `/api/members` | Registrar nuevo miembro |
-| PUT | `/api/members/:id` | Editar datos del miembro |
-| PATCH | `/api/members/:id/block` | Bloquear / desbloquear (solo admin) |
-| DELETE | `/api/members/:id` | Eliminar miembro (solo admin) |
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/members` | JWT | Listar miembros (filtros: search, status, plan) |
+| GET | `/members/alerts` | JWT | Miembros próximos a vencer (≤3 días) |
+| GET | `/members/:id` | JWT | Detalle + historial pagos y asistencia |
+| POST | `/members` | JWT | Registrar nuevo miembro |
+| PUT | `/members/:id` | JWT | Editar miembro (incluye fecha de ingreso y plan) |
+| PATCH | `/members/:id/block` | Admin | Bloquear / desbloquear |
+| DELETE | `/members/:id` | Admin | Eliminar miembro |
 
 ### Pagos
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/api/payments` | Historial de pagos |
-| POST | `/api/payments` | Registrar pago |
-| GET | `/api/payments/report` | Cierre de caja por `?period=day/week/month` |
-
-**Nota sobre timezone:** El campo `paid_at` se inserta como `(NOW() AT TIME ZONE 'America/Costa_Rica')::date` para evitar desfases UTC.
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/payments` | JWT | Historial de pagos |
+| POST | `/payments` | JWT | Registrar pago — extiende vencimiento automáticamente |
+| GET | `/payments/report` | JWT | Cierre de caja `?period=day/week/month` |
 
 ### Asistencia
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/attendance` | JWT | Asistencia del día `?date=YYYY-MM-DD` |
+| POST | `/attendance` | JWT | Registrar entrada desde panel admin |
+| PATCH | `/attendance/:id/exit` | JWT | Registrar salida desde panel admin |
+| GET | `/attendance/stats` | JWT | Estadísticas de la semana |
+
+### Kiosko (público — sin JWT)
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| GET | `/api/attendance` | Asistencia del día (`?date=YYYY-MM-DD`) |
-| POST | `/api/attendance` | Registrar entrada |
-| PATCH | `/api/attendance/:id/exit` | Registrar salida |
-| GET | `/api/attendance/stats` | Estadísticas de la semana |
+| GET | `/kiosko/search?q=...&gymId=...` | Búsqueda en tiempo real por nombre o cédula |
+| GET | `/kiosko/inside?memberId=...&gymId=...` | Verifica si el miembro ya está dentro |
+| POST | `/kiosko/attendance` | Registrar entrada desde tablet |
+| PATCH | `/kiosko/attendance/:id/exit` | Registrar salida desde tablet |
 
 ---
 
 ## Frontend — Módulos
 
-El frontend vive casi en su totalidad en `Dashboard.jsx`. Los componentes principales son:
+### Pestañas del panel admin
+| Pestaña | Descripción |
+|---------|-------------|
+| Dashboard | Resumen en tiempo real — actualización cada 3 segundos |
+| Miembros | Lista filtrable por nombre, cédula, estado y plan |
+| Asistencia | Control de entrada/salida del día |
+| Pagos | Historial del mes + cierre de caja PDF |
+| Lista Negra | Miembros bloqueados con razón |
 
+### Componentes principales
 | Componente | Descripción |
 |-----------|-------------|
 | `Dashboard` | Componente raíz — maneja todo el estado global |
-| `AttendanceModal` | Control de entrada y salida de miembros |
-| `PaymentModal` | Registro de pagos con descuentos |
-| `MemberModal` | Formulario de registro / edición de miembro |
+| `MemberModal` | Registro/edición con fecha de ingreso y 5 planes |
+| `AttendanceModal` | Control de entrada y salida con búsqueda |
+| `PaymentModal` | Registro de pagos con montos sugeridos y descuentos |
 | `CashReportModal` | Cierre de caja con descarga PDF (jsPDF) |
-| `AlertListModal` | Lista de miembros por vencer con envío WhatsApp |
-| `MemberSearch` | Buscador con debounce para seleccionar miembros |
-| `Modal` | Componente base de modal reutilizable |
-| `Btn` | Botón con variantes (green, ghost, etc.) |
+| `AlertListModal` | Alertas de vencimiento con envío masivo WhatsApp |
 | `Avatar` | Avatar con iniciales y color determinístico |
 | `PlanTag` | Badge de plan con color por tipo |
-| `StatusBadge` | Badge de estado activo/inactivo/vencido |
+| `StatusBadge` | Badge de estado (Activo/Vencido/Inactivo/Bloqueado) |
 
-### Pestañas del sistema
-- **Dashboard** — Resumen en tiempo real (actualización cada 30s)
-- **Miembros** — Lista filtrable con búsqueda
-- **Asistencia** — Control de entrada/salida del día
-- **Pagos** — Historial del mes + cierre de caja
-- **Lista Negra** — Miembros bloqueados
+### Planes disponibles
+| Plan | Días | Color |
+|------|------|-------|
+| Día | 1 | Naranja |
+| Semanal | 7 | Celeste |
+| Quincenal | 15 | Verde |
+| Mensual | 30 | Índigo |
+| Bimensual | 60 | Violeta |
 
 ---
 
-## Autenticación
+## Pantalla Kiosko
 
-- Login devuelve un **JWT** que se guarda en `localStorage`
-- `AuthContext.jsx` expone `user`, `login()`, `logout()`
-- `api.js` usa un interceptor de axios que adjunta `Authorization: Bearer <token>` en cada request
-- El backend valida el token en el middleware `auth.js` y extrae `userId`, `gymId`, y `role`
-- El middleware `adminOnly` bloquea operaciones sensibles (bloquear, eliminar) a usuarios con rol `staff`
+Pantalla dedicada para tablet en la entrada del gimnasio. Los miembros marcan su propia asistencia sin acceso al panel admin.
+
+**URL:** `https://gym-os-qtw7.vercel.app/kiosko/:gymId`
+
+- Cada gimnasio tiene su propia URL con su `gymId`
+- Búsqueda en tiempo real por **nombre o cédula** con debounce de 300ms
+- Muestra plan y estado del miembro al seleccionarlo
+- **Activo** → puede marcar entrada (verde) o salida (naranja) según corresponda
+- **Vencido** → muestra mensaje de pago requerido, sin botón de entrada
+- **Bloqueado** → muestra mensaje de acceso restringido
+- Vuelve automáticamente a la pantalla inicial después de 4 segundos
+- No requiere JWT — endpoints públicos filtrados por gymId
+- La asistencia marcada desde el kiosko aparece en el panel admin en ~3 segundos
+
+---
+
+## Autenticación y Seguridad
+
+| Mecanismo | Descripción |
+|-----------|-------------|
+| JWT (8h) | Token firmado con JWT_SECRET, guardado en localStorage |
+| bcrypt (12 rounds) | Hash seguro de contraseñas |
+| AuthContext | Contexto global que expone user, login(), logout() |
+| Interceptor Axios | Agrega Authorization: Bearer automáticamente |
+| Middleware auth.js | Verifica JWT, extrae userId/gymId/role |
+| adminOnly | Bloquea operaciones sensibles a usuarios staff |
+| Rate limiting login | Máx 20 intentos cada 15 minutos |
+| Rate limiting general | Máx 300 requests/minuto por IP |
+| CORS whitelist | Solo acepta gym-os-qtw7.vercel.app y localhost:5173 |
+| trust proxy | Configurado para Railway (proxy reverso) |
 
 ---
 
 ## Variables de entorno
 
-### Backend — `.env`
+### Backend — `gymos-backend/.env`
 ```env
 DATABASE_URL=postgresql://postgres.XXXX:PASSWORD@aws-1-us-east-1.pooler.supabase.com:5432/postgres
-JWT_SECRET=tu_clave_secreta_muy_larga
+JWT_SECRET=clave_secreta_muy_larga_y_aleatoria
 PORT=3001
+FRONTEND_URL=https://gym-os-qtw7.vercel.app
 ```
 
-### Frontend — `.env`
+### Frontend — `gymos-frontend/.env`
 ```env
-VITE_API_URL=http://localhost:3001/api
+VITE_API_URL=https://gymos-production.up.railway.app/api
 ```
+
+> ⚠️ **IMPORTANTE:** Los archivos `.env` están en `.gitignore` y nunca deben subirse al repositorio. Las variables de producción se configuran en Railway (backend) y están embebidas en el build de Vite (frontend).
 
 ---
 
@@ -268,14 +367,9 @@ VITE_API_URL=http://localhost:3001/api
 cd gymos-backend
 npm install
 
-# Copiar variables de entorno
-cp .env.example .env
-# Editar .env con tu DATABASE_URL y JWT_SECRET
-
+# Crear archivo .env con DATABASE_URL y JWT_SECRET
 # Crear tablas
 node src/db/migrate.js
-
-# Agregar columna exit_at (si no existe)
 node src/db/migrate_exit.js
 
 # Datos de prueba (opcional)
@@ -290,53 +384,81 @@ npm run dev
 cd gymos-frontend
 npm install
 
-# Copiar variables de entorno
-cp .env.example .env
-# Editar VITE_API_URL si el backend corre en otro puerto
-
+# Crear archivo .env con VITE_API_URL=http://localhost:3001/api
 npm run dev
 ```
 
 ### Credenciales de prueba
 ```
+URL:      http://localhost:5173
 Email:    admin@gymos.com
 Password: admin123
+Kiosko:   http://localhost:5173/kiosko/1
 ```
 
 ---
 
 ## Despliegue en producción
 
-### Backend — opciones recomendadas
-- **Railway** — conectá el repo, agregá las env vars, deploy automático
-- **Render** — plan gratuito disponible, igual de simple
-- **VPS (DigitalOcean/Hetzner)** — más control, desde $5/mes
+| Componente | Plataforma | URL |
+|-----------|-----------|-----|
+| Backend | Railway | gymos-production.up.railway.app |
+| Frontend | Vercel | gym-os-qtw7.vercel.app |
+| Base de datos | Supabase | aws-1-us-east-1.pooler.supabase.com |
 
-### Frontend — opciones recomendadas
-- **Vercel** — ideal para Vite/React, deploy en segundos desde Git
-- **Netlify** — igual de simple
+### Variables en Railway
+Configurar en el panel de Railway → Variables:
+- `DATABASE_URL` — Session Pooler de Supabase
+- `JWT_SECRET` — clave secreta
+- `FRONTEND_URL` — URL de Vercel
 
-### Pasos básicos para producción
-1. Subir backend a Railway o Render
-2. Actualizar `VITE_API_URL` en el frontend con la URL del backend desplegado
-3. Subir frontend a Vercel
-4. Configurar CORS en el backend para aceptar el dominio de Vercel
+### vercel.json (raíz del proyecto)
+```json
+{
+  "buildCommand": "ls",
+  "outputDirectory": "gymos-frontend/dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+---
+
+## Flujo Git → Producción
+
+### Cambios en el backend
+```bash
+# Editás código en gymos-backend/src/
+git add gymos-backend/
+git commit -m "feat: descripción"
+git push
+# Railway redesplega automáticamente en ~2 minutos
+```
+
+### Cambios en el frontend
+```bash
+# Editás código en gymos-frontend/src/
+cd gymos-frontend
+npm run build          # Compilar dist
+cd ..
+git add .
+git commit -m "feat: descripción"
+git push
+# Vercel redesplega automáticamente en ~1 minuto
+```
 
 ---
 
 ## Modelo SaaS y multi-tenancy
 
-Cada gimnasio se registra via `POST /api/gyms/register` y recibe su propio `gym_id`. **Todas** las tablas tienen `gym_id` como columna obligatoria y todos los queries filtran por él.
+Cada gimnasio se registra y recibe su propio `gym_id`. **Todas** las tablas tienen `gym_id` obligatorio y todos los queries filtran por él — el `gym_id` se extrae del JWT (no del request del cliente).
 
 ```
 gym A (gym_id=1) ──► solo ve sus members, payments, attendance
 gym B (gym_id=2) ──► solo ve sus members, payments, attendance
 ```
 
-Es imposible que un gimnasio acceda a datos de otro porque el `gym_id` se extrae del JWT (no del request del cliente) en el middleware de autenticación.
-
-### Capacidad estimada (Supabase plan gratuito)
-| Plan Supabase | Storage | Filas aprox. | Gimnasios aprox. |
+### Capacidad estimada
+| Plan Supabase | Storage | Filas aprox. | Gymnasios aprox. |
 |--------------|---------|-------------|-----------------|
 | Gratuito | 500 MB | ~500,000 | ~15 gyms activos |
 | Pro ($25/mes) | 8 GB | Millones | Cientos de gyms |
@@ -347,16 +469,21 @@ Es imposible que un gimnasio acceda a datos de otro porque el `gym_id` se extrae
 
 | Decisión | Razón |
 |----------|-------|
-| Solo SINPE y Efectivo | Mercado CR, sin necesidad de datafono |
-| Planes: Mensual / Semanal / Día | Cubre el 95% de gimnasios pequeños en CR |
-| Montos editables manualmente | Flexibilidad para descuentos y casos especiales |
-| `paid_at` como `DATE` con zona CR | Evita bugs de UTC al filtrar pagos del día |
-| `TO_CHAR(expires_at, 'YYYY-MM-DD')` | Supabase devuelve timestamps completos; el string limpio permite comparaciones exactas |
-| `exit_at` nullable en attendance | Permite saber quién está dentro del gym en tiempo real |
-| jsPDF para reportes | Sin dependencia de servidor para generar PDFs, descarga directa en el cliente |
-| Alertas solo para Mensual y Semanal | Plan Día no necesita avisos de vencimiento |
-| WhatsApp via `wa.me` | Sin API de pago, abre directo en el teléfono del admin |
+| 5 planes (Día/Semanal/Quincenal/Mensual/Bimensual) | Cubre el 100% de modelos de gimnasios pequeños en CR |
+| Fecha de ingreso editable | Permite migrar miembros existentes con sus fechas reales |
+| Al pagar: `GREATEST(expires_at, HOY) + días` | El miembro no pierde días si paga antes de vencer |
+| `paid_at` como `DATE` zona CR | Evita bugs de UTC al filtrar pagos del día |
+| `TO_CHAR(expires_at, 'YYYY-MM-DD')` | Supabase devuelve timestamps completos; string limpio evita comparaciones incorrectas |
+| `exit_at` nullable | `exit_at IS NULL` = miembro dentro del gym en tiempo real |
+| Kiosko sin JWT | La tablet no necesita login — filtrado por gymId en URL |
+| URL dinámica `/kiosko/:gymId` | Cada gym tiene su propio kiosko, datos aislados |
+| Actualización cada 3s en panel admin | Refleja casi instantáneamente las entradas del kiosko |
+| jsPDF en el cliente | Sin dependencia de servidor para PDFs |
+| WhatsApp via `wa.me` | Sin API de pago, mensaje pre-escrito directo al teléfono |
+| dist compilado en Git | Workaround para Vercel con monorepo |
+| Session Pooler Supabase | Railway usa IPv4 — Direct connection no compatible sin add-on |
+| trust proxy en Railway | Necesario para express-rate-limit con proxy reverso |
 
 ---
 
-*GymOS — Desarrollado con Node.js, React y Supabase*
+*GymOS v1.0 — Desarrollado por Kevin Rivera | Marzo 2026*
