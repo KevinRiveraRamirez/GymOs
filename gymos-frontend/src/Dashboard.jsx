@@ -793,7 +793,7 @@ export default function Dashboard() {
   useEffect(()=>{ loadMembers(); },[loadMembers]);
   useEffect(()=>{
     loadAttendance(); loadAlerts(); loadPayments();
-    const t = setInterval(()=>{ loadAttendance(); loadPayments(); }, 30000);
+    const t = setInterval(()=>{ loadAttendance(); loadPayments(); }, 3000);
     return ()=>clearInterval(t);
   },[]);
 
