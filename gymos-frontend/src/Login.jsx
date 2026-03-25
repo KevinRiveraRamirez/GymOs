@@ -1,91 +1,87 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import AppLogo from "./AppLogo";
 import { useAuth } from "./AuthContext";
+import { cn } from "./lib/cn";
 
 export default function Login() {
-  const [email, setEmail]       = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError]       = useState("");
-  const [loading, setLoading]   = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-  const navigate  = useNavigate();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); setLoading(true);
+    setError("");
+    setLoading(true);
     try {
       await login(email, password);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.error || "Error al iniciar sesión");
+      setError(err.response?.data?.error || "Error al iniciar sesion");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{
-      minHeight:"100vh", background:"#080a0f",
-      display:"flex", alignItems:"center", justifyContent:"center",
-      fontFamily:"'DM Sans',sans-serif"
-    }}>
-      <div style={{
-        background:"#0d0f1a", border:"1px solid #1a1d2e",
-        borderRadius:20, padding:"40px 36px", width:380, maxWidth:"90vw"
-      }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:32 }}>
-          <div style={{
-            width:44, height:44, borderRadius:12,
-            background:"linear-gradient(135deg,#6366f1,#818cf8)",
-            display:"flex", alignItems:"center", justifyContent:"center", fontSize:22
-          }}>💪</div>
-          <div>
-            <div style={{ color:"#f1f5f9", fontWeight:900, fontSize:20 }}>GymOS</div>
-            <div style={{ color:"#475569", fontSize:12 }}>Panel de Administración</div>
-          </div>
-        </div>
+    <div className="flex min-h-screen items-center justify-center bg-[#080a0f] px-4">
+      <div className="w-full max-w-[380px] rounded-[20px] border border-[#1a1d2e] bg-[#0d0f1a] px-6 py-8 shadow-[0_24px_80px_#00000045] sm:px-9 sm:py-10">
+        <AppLogo
+          variant="light"
+          size="lg"
+          subtitle="Panel de Administracion"
+          className="mb-8"
+          titleClassName="text-slate-100"
+          subtitleClassName="text-slate-600"
+        />
 
         {error && (
-          <div style={{
-            background:"#7f1d1d22", border:"1px solid #7f1d1d",
-            borderRadius:10, padding:"10px 14px", marginBottom:16,
-            color:"#f87171", fontSize:13
-          }}>⚠ {error}</div>
+          <div className="mb-4 rounded-[10px] border border-red-900 bg-[#7f1d1d22] px-3.5 py-2.5 text-[13px] text-red-400">
+            {error}
+          </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom:14 }}>
-            <label style={{ display:"block", fontSize:11, color:"#64748b", marginBottom:5, fontWeight:700, letterSpacing:"0.5px" }}>EMAIL</label>
+        <form onSubmit={handleSubmit} className="space-y-[14px]">
+          <div>
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[0.5px] text-slate-500">
+              EMAIL
+            </label>
             <input
-              type="email" value={email} onChange={e=>setEmail(e.target.value)}
-              placeholder="admin@tugimnasio.com" required
-              style={{
-                width:"100%", background:"#12141f", border:"1px solid #252838",
-                borderRadius:10, padding:"11px 14px", color:"#f1f5f9",
-                fontSize:14, outline:"none", fontFamily:"inherit", boxSizing:"border-box"
-              }}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@tugimnasio.com"
+              required
+              className="w-full rounded-[10px] border border-[#252838] bg-[#12141f] px-3.5 py-[11px] text-sm text-slate-100 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
-          <div style={{ marginBottom:24 }}>
-            <label style={{ display:"block", fontSize:11, color:"#64748b", marginBottom:5, fontWeight:700, letterSpacing:"0.5px" }}>CONTRASEÑA</label>
+          <div className="pb-2.5">
+            <label className="mb-[5px] block text-[11px] font-bold tracking-[0.5px] text-slate-500">
+              CONTRASENA
+            </label>
             <input
-              type="password" value={password} onChange={e=>setPassword(e.target.value)}
-              placeholder="••••••••" required
-              style={{
-                width:"100%", background:"#12141f", border:"1px solid #252838",
-                borderRadius:10, padding:"11px 14px", color:"#f1f5f9",
-                fontSize:14, outline:"none", fontFamily:"inherit", boxSizing:"border-box"
-              }}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="********"
+              required
+              className="w-full rounded-[10px] border border-[#252838] bg-[#12141f] px-3.5 py-[11px] text-sm text-slate-100 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
-          <button type="submit" disabled={loading} style={{
-            width:"100%", padding:"12px", borderRadius:12,
-            background: loading ? "#1e2130" : "linear-gradient(135deg,#6366f1,#818cf8)",
-            border:"none", color: loading ? "#475569" : "#fff",
-            fontSize:14, fontWeight:700, cursor: loading ? "not-allowed" : "pointer",
-            fontFamily:"inherit"
-          }}>
-            {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+          <button
+            type="submit"
+            disabled={loading}
+            className={cn(
+              "flex w-full items-center justify-center rounded-xl px-3 py-3 text-sm font-bold text-white transition",
+              loading
+                ? "cursor-not-allowed bg-[#1e2130] text-slate-600"
+                : "bg-linear-to-br from-indigo-500 to-indigo-400 hover:from-indigo-600 hover:to-indigo-500"
+            )}
+          >
+            {loading ? "Iniciando sesion..." : "Iniciar Sesion"}
           </button>
         </form>
       </div>

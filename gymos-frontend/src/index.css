@@ -1,68 +1,160 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;700&display=swap");
+@import "tailwindcss";
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@theme {
+  --font-sans: "DM Sans", sans-serif;
+  --font-mono: "DM Mono", monospace;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
+@layer base {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    color: #0f172a;
+    background: #f0f2f7;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  a:hover {
-    color: #747bff;
+
+  * {
+    box-sizing: border-box;
   }
-  button {
-    background-color: #f9f9f9;
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
   }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    background: #f0f2f7;
+    font-family: var(--font-sans);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  select option {
+    background: #ffffff;
+    color: #0f172a;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+  }
+}
+
+@layer components {
+  .app-card {
+    @apply rounded-[14px] border border-slate-200 bg-white p-5 shadow-[0_1px_4px_#00000009];
+  }
+
+  .app-input {
+    @apply w-full rounded-[10px] border-[1.5px] border-slate-300 bg-slate-50 px-[13px] py-2.5 text-[13px] text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .app-label {
+    @apply mb-[5px] block text-[11px] font-bold tracking-[0.5px] text-slate-600;
+  }
+
+  .app-btn {
+    @apply inline-flex items-center justify-center rounded-[10px] border border-transparent px-[18px] py-2.5 text-[13px] font-bold transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .app-btn-primary {
+    @apply bg-indigo-500 text-white hover:bg-indigo-600;
+  }
+
+  .app-btn-green {
+    @apply bg-emerald-600 text-white hover:bg-emerald-700;
+  }
+
+  .app-btn-red {
+    @apply bg-red-600 text-white hover:bg-red-700;
+  }
+
+  .app-btn-ghost {
+    @apply border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200;
+  }
+
+  .app-chip {
+    @apply inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-bold;
+  }
+
+  .app-surface-muted {
+    @apply rounded-xl border border-slate-200 bg-slate-50;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@utility animate-fade-in-up {
+  animation: fade-in-up 0.25s ease;
+}
+
+@utility animate-pulse-soft {
+  animation: pulse-soft 0.5s ease;
+}
+
+@utility animate-toast-in {
+  animation: toast-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }

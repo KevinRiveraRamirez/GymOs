@@ -8,18 +8,29 @@ export function AuthProvider({ children }) {
     const saved = localStorage.getItem("gymos_user");
     return saved ? JSON.parse(saved) : null;
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem("gymos_token")));
 
   useEffect(() => {
     const token = localStorage.getItem("gymos_token");
-    if (token) {
-      api.get("/auth/me")
-        .then(r => setUser(r.data))
-        .catch(() => { localStorage.removeItem("gymos_token"); localStorage.removeItem("gymos_user"); })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    if (!token) return;
+
+    let active = true;
+
+    api.get("/auth/me")
+      .then(r => {
+        if (active) setUser(r.data);
+      })
+      .catch(() => {
+        localStorage.removeItem("gymos_token");
+        localStorage.removeItem("gymos_user");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const login = async (email, password) => {
@@ -43,4 +54,5 @@ export function AuthProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

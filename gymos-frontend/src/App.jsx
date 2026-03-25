@@ -6,13 +6,13 @@ import Kiosko from "./Kiosko";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return (
-    <div style={{ minHeight:"100vh", background:"#080a0f", display:"flex",
-      alignItems:"center", justifyContent:"center", color:"#475569",
-      fontFamily:"'DM Sans',sans-serif", fontSize:14 }}>
-      Cargando...
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#080a0f] text-sm text-slate-600">
+        Cargando...
+      </div>
+    );
+  }
   return user ? children : <Navigate to="/login" />;
 }
 
