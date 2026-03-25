@@ -59,11 +59,12 @@ const planBadgeStyle = (plan) => {
 function Avatar({ member, size, blocked = false }) {
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full font-black text-white"
+      className="flex shrink-0 items-center justify-center rounded-full font-black leading-none text-white"
       style={{
         width: size,
         height: size,
         fontSize: Math.round(size * 0.38),
+        lineHeight: 1,
         background: blocked ? "#374151" : avatarColor(member),
       }}
     >
@@ -301,7 +302,7 @@ export default function Kiosko() {
 
         {state === "found" && member && (
           <section className="animate-fade-in-up text-center">
-            <div className="mx-auto mb-4">
+            <div className="mx-auto mb-4 w-fit">
               <Avatar member={member.name} size={90} />
             </div>
             <h2 className="mb-1.5 text-2xl font-black text-white">{member.name}</h2>
@@ -385,7 +386,7 @@ export default function Kiosko() {
               {message === "salida_ok" ? "👋" : message === "ya_dentro" ? "✋" : "✅"}
             </div>
             {member && (
-              <div className="mx-auto mb-3.5">
+              <div className="mx-auto mb-3.5 w-fit">
                 <Avatar member={member.name} size={72} />
               </div>
             )}
