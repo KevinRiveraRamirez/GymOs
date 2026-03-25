@@ -37,12 +37,12 @@ export function DashboardOverview({
               >
                 <span className="text-base">🔴</span>
                 <span className="flex-1 text-[13px] font-bold text-orange-600">
-                  {alerts.expiringToday.length} membresía
+                  {alerts.expiringToday.length} membresia
                   {alerts.expiringToday.length > 1 ? "s" : ""} vence
                   {alerts.expiringToday.length === 1 ? "" : "n"} HOY
                 </span>
                 <span className="rounded-full border border-orange-200 bg-white px-2.5 py-[3px] text-[11px] font-bold text-orange-600">
-                  Ver y avisar →
+                  Ver y avisar {"->"}
                 </span>
               </button>
               <div className="flex flex-wrap gap-2 border-t border-orange-200 px-4 py-2">
@@ -64,7 +64,7 @@ export function DashboardOverview({
                 type="button"
                 onClick={() =>
                   setAlertModal({
-                    title: "Vencen en 1-3 días",
+                    title: "Vencen en 1-3 dias",
                     members: alerts.expiringSoon,
                     color: T.yellow,
                     icon: "⚠️",
@@ -76,10 +76,10 @@ export function DashboardOverview({
                 <span className="text-base">⚠️</span>
                 <span className="flex-1 text-[13px] font-bold text-amber-600">
                   {alerts.expiringSoon.length} vence
-                  {alerts.expiringSoon.length === 1 ? "" : "n"} en 1-3 días
+                  {alerts.expiringSoon.length === 1 ? "" : "n"} en 1-3 dias
                 </span>
                 <span className="rounded-full border border-amber-200 bg-white px-2.5 py-[3px] text-[11px] font-bold text-amber-600">
-                  Ver y avisar →
+                  Ver y avisar {"->"}
                 </span>
               </button>
               <div className="flex flex-wrap gap-2 border-t border-amber-200 px-4 py-2">
@@ -116,7 +116,7 @@ export function DashboardOverview({
                   vencida
                 </span>
                 <span className="rounded-full border border-violet-300 bg-white px-2.5 py-[3px] text-[11px] font-bold text-violet-600">
-                  Ver y avisar →
+                  Ver y avisar {"->"}
                 </span>
               </button>
               <div className="flex flex-wrap gap-2 border-t border-violet-300 px-4 py-2">
@@ -125,7 +125,7 @@ export function DashboardOverview({
                     key={member.id}
                     className="rounded-full border border-violet-300 bg-white px-2.5 py-[3px] text-[11px] font-semibold text-violet-600"
                   >
-                    {member.name.split(" ")[0]} · venció {fmtDate(member.expires_at)}
+                    {member.name.split(" ")[0]} · vencio {fmtDate(member.expires_at)}
                   </span>
                 ))}
               </div>
@@ -153,10 +153,9 @@ export function DashboardOverview({
             </div>
             <div
               className={cn(
-                "font-mono font-black",
+                "font-mono font-bold text-slate-900",
                 typeof item.val === "string" && item.val.length > 8 ? "text-base" : "text-[28px]"
               )}
-              style={{ color: item.color }}
             >
               {item.val}
             </div>
@@ -173,7 +172,7 @@ export function DashboardOverview({
             </span>
           </div>
           {todayAtt.length === 0 && (
-            <div className="p-5 text-center text-xs text-slate-400">Sin registros aún</div>
+            <div className="p-5 text-center text-xs text-slate-400">Sin registros aun</div>
           )}
           {[...todayAtt].reverse().slice(0, 6).map((item, index) => (
             <div
@@ -242,44 +241,46 @@ export function MembersView({
 }) {
   return (
     <div>
-      <div className="mb-[14px] flex flex-col gap-2">
+      <div className="mb-[14px] flex flex-col gap-2 lg:flex-row lg:items-center">
         <input
-          placeholder="🔍  Nombre, cédula o teléfono..."
+          placeholder="🔍  Nombre, cedula o telefono..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className={cn(inputClass, "w-full bg-white")}
+          className={cn(inputClass, "w-full bg-white lg:flex-1")}
         />
-        <div className="-mx-1 overflow-x-auto pb-1">
-          <div className="flex min-w-max gap-2 px-1">
-            {["all", "active", "overdue", "inactive", "blocked"].map((status) => (
-              <ToggleButton
-                key={status}
-                active={filterStatus === status}
-                onClick={() => setFilterStatus(status)}
-                className="shrink-0 px-3 py-2 text-[11px]"
-                activeClassName="border-indigo-500 bg-indigo-50 text-indigo-500"
-              >
-                {{
-                  all: "Todos",
-                  active: "Activos",
-                  overdue: "Vencidos",
-                  inactive: "Inactivos",
-                  blocked: "Bloqueados",
-                }[status]}
-              </ToggleButton>
-            ))}
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end">
+          <div className="-mx-1 overflow-x-auto pb-1 lg:mx-0 lg:pb-0">
+            <div className="flex min-w-max gap-2 px-1 lg:px-0">
+              {["all", "active", "overdue", "inactive", "blocked"].map((status) => (
+                <ToggleButton
+                  key={status}
+                  active={filterStatus === status}
+                  onClick={() => setFilterStatus(status)}
+                  className="shrink-0 px-3 py-2 text-[11px]"
+                  activeClassName="border-indigo-500 bg-indigo-50 text-indigo-500"
+                >
+                  {{
+                    all: "Todos",
+                    active: "Activos",
+                    overdue: "Vencidos",
+                    inactive: "Inactivos",
+                    blocked: "Bloqueados",
+                  }[status]}
+                </ToggleButton>
+              ))}
+            </div>
           </div>
+          <select
+            value={filterPlan}
+            onChange={(e) => setFilterPlan(e.target.value)}
+            className="w-full rounded-[9px] border-[1.5px] border-slate-300 bg-white px-3 py-2 text-[11px] text-slate-600 outline-none sm:w-auto lg:min-w-[160px]"
+          >
+            <option value="all">Todos los planes</option>
+            {PLAN_OPTIONS.map((plan) => (
+              <option key={plan}>{plan}</option>
+            ))}
+          </select>
         </div>
-        <select
-          value={filterPlan}
-          onChange={(e) => setFilterPlan(e.target.value)}
-          className="w-full rounded-[9px] border-[1.5px] border-slate-300 bg-white px-3 py-2 text-[11px] text-slate-600 outline-none sm:w-auto"
-        >
-          <option value="all">Todos los planes</option>
-          {PLAN_OPTIONS.map((plan) => (
-            <option key={plan}>{plan}</option>
-          ))}
-        </select>
       </div>
 
       <div className="mb-2.5 text-[11px] text-slate-400">
@@ -299,7 +300,7 @@ export function MembersView({
                 borderColor: member.blocked ? "#fca5a5" : days <= 3 && days > 0 ? "#fed7aa" : T.border,
               }}
             >
-              <div className="flex items-start gap-3.5">
+              <div className="flex items-start gap-3.5 md:items-center">
                 <Avatar name={member.name} size={42} />
                 <div className="min-w-0 flex-1">
                   <div className="mb-0.5 truncate text-sm font-bold text-slate-900">{member.name}</div>
@@ -307,6 +308,10 @@ export function MembersView({
                     CI: {member.cedula}
                     {member.phone ? ` · ${member.phone}` : ""}
                   </div>
+                </div>
+                <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 md:flex">
+                  <PlanTag plan={member.plan} />
+                  <StatusBadge status={member.status} blocked={member.blocked} />
                 </div>
                 <div
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm"
@@ -317,7 +322,7 @@ export function MembersView({
                   {days <= 0 ? "⚠️" : days <= 3 ? "⏰" : "✓"}
                 </div>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2 md:hidden">
                 <PlanTag plan={member.plan} />
                 <StatusBadge status={member.status} blocked={member.blocked} />
               </div>
@@ -361,7 +366,7 @@ export function AttendanceView({ todayAtt, loadAttendance, showToast }) {
 
       <Card>
         <div className="mb-3.5 text-sm font-bold text-slate-900">
-          Registro —{" "}
+          Registro -{" "}
           {new Date().toLocaleDateString("es-CR", {
             weekday: "long",
             day: "numeric",
@@ -369,7 +374,7 @@ export function AttendanceView({ todayAtt, loadAttendance, showToast }) {
           })}
         </div>
         {todayAtt.length === 0 && (
-          <div className="p-[30px] text-center text-xs text-slate-400">Sin entradas aún</div>
+          <div className="p-[30px] text-center text-xs text-slate-400">Sin entradas aun</div>
         )}
         <div className="flex flex-col gap-1.5">
           {[...todayAtt].reverse().map((item, index) => (
@@ -378,15 +383,15 @@ export function AttendanceView({ todayAtt, loadAttendance, showToast }) {
               className="rounded-[10px] border bg-slate-50 px-3.5 py-2.5"
               style={{ borderColor: item.exit_time ? T.border : "#86efac" }}
             >
-              <div className="flex items-start gap-2.5">
+              <div className="flex items-start gap-2.5 md:items-center">
                 <span
-                  className="mt-3 h-[9px] w-[9px] shrink-0 rounded-full"
+                  className="mt-3 h-[9px] w-[9px] shrink-0 rounded-full md:mt-0"
                   style={{ background: item.exit_time ? T.text3 : T.green }}
                 />
                 <Avatar name={item.member_name} size={32} />
                 <div className="min-w-0 flex-1">
                   <div className="text-[13px] font-semibold text-slate-900">{item.member_name}</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <div className="mt-1 flex flex-wrap items-center gap-2 md:hidden">
                     <PlanTag plan={item.plan} />
                     <span className="font-mono text-[11px] text-slate-600">
                       ▶{item.time}
@@ -394,11 +399,35 @@ export function AttendanceView({ todayAtt, loadAttendance, showToast }) {
                     </span>
                   </div>
                 </div>
+                <div className="hidden shrink-0 items-center gap-2 md:flex">
+                  <PlanTag plan={item.plan} />
+                  <span className="font-mono text-[11px] text-slate-600">
+                    ▶{item.time}
+                    {item.exit_time && ` ↩${item.exit_time}`}
+                  </span>
+                  {item.exit_time ? (
+                    <span className="shrink-0 rounded-full bg-slate-100 px-[9px] py-[3px] text-[10px] text-slate-400">
+                      Salio
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await api.patch(`/attendance/${item.id}/exit`);
+                        await loadAttendance();
+                        showToast(`↩ Salida: ${item.member_name}`);
+                      }}
+                      className="rounded-lg border-[1.5px] border-orange-600 bg-orange-100 px-[11px] py-1.5 text-[11px] font-bold text-orange-600 transition hover:bg-orange-200"
+                    >
+                      ↩ Salida
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="mt-3 flex justify-end">
+              <div className="mt-3 flex justify-end md:hidden">
                 {item.exit_time ? (
                   <span className="shrink-0 rounded-full bg-slate-100 px-[9px] py-[3px] text-[10px] text-slate-400">
-                    Salió
+                    Salio
                   </span>
                 ) : (
                   <button
@@ -454,7 +483,7 @@ export function PaymentsView({ payments, todayTotal, todaySINPE, todayEfectivo }
               key={index}
               className="rounded-[10px] border border-slate-200 bg-slate-50 px-3.5 py-2.5"
             >
-              <div className="flex items-start gap-2.5">
+              <div className="flex items-start gap-2.5 md:items-center">
                 <span className="pt-0.5 text-lg">{payment.method === "SINPE" ? "📱" : "💵"}</span>
                 <div className="min-w-0 flex-1">
                   <div className="text-[13px] font-semibold text-slate-900">{payment.member_name}</div>
@@ -462,11 +491,20 @@ export function PaymentsView({ payments, todayTotal, todaySINPE, todayEfectivo }
                     {fmtDate(payment.paid_at)} · {payment.method}
                   </div>
                 </div>
-                <span className="font-mono text-sm font-extrabold text-emerald-600">
+                <div className="hidden shrink-0 items-center gap-2 md:flex">
+                  <PlanTag plan={payment.plan} />
+                  {payment.discount > 0 && (
+                    <span className="text-[10px] text-red-600">-{payment.discount}%</span>
+                  )}
+                  <span className="font-mono text-sm font-extrabold text-emerald-600">
+                    {fmtMoney(payment.amount)}
+                  </span>
+                </div>
+                <span className="font-mono text-sm font-extrabold text-emerald-600 md:hidden">
                   {fmtMoney(payment.amount)}
                 </span>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2 md:hidden">
                 <PlanTag plan={payment.plan} />
                 {payment.discount > 0 && (
                   <span className="text-[10px] text-red-600">-{payment.discount}%</span>
@@ -520,7 +558,7 @@ export function BlacklistView({ members, toggleBlock }) {
           </Btn>
           <div className="rounded-lg border border-red-300 bg-red-100 px-3 py-2">
             <span className="text-xs text-red-600">
-              🚫 {member.blacklist_reason || "Sin razón especificada"}
+              🚫 {member.blacklist_reason || "Sin razon especificada"}
             </span>
           </div>
         </div>
@@ -558,10 +596,10 @@ export function MemberDetailModal({
 
       <div className="mb-[14px] grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         {[
-          { label: "Ingresó", val: fmtDate(member.joined_at) },
+          { label: "Ingreso", val: fmtDate(member.joined_at) },
           { label: "Vence", val: fmtDate(member.expires_at), warn: days <= 7 && days >= 0 },
           { label: "Plan", val: member.plan },
-          { label: "Días restantes", val: days > 0 ? `${days} días` : "Vencido", warn: days <= 0 },
+          { label: "Dias restantes", val: days > 0 ? `${days} dias` : "Vencido", warn: days <= 0 },
         ].map((item) => (
           <SurfaceBox key={item.label} className="px-3.5 py-2.5">
             <div className="mb-[3px] text-[10px] font-bold text-slate-400">
@@ -604,7 +642,7 @@ export function MemberDetailModal({
       <button
         type="button"
         onClick={async () => {
-          if (!window.confirm(`¿Eliminar a ${member.name}? Esta acción no se puede deshacer.`)) {
+          if (!window.confirm(`¿Eliminar a ${member.name}? Esta accion no se puede deshacer.`)) {
             return;
           }
           try {
