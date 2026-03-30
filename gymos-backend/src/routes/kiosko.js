@@ -57,11 +57,10 @@ router.get("/member", async (req, res) => {
       return res.status(404).json({ error: "Miembro no encontrado" });
 
     const member = memberRes.rows[0];
-    const today = new Date().toISOString().split("T")[0];
     const attRes = await pool.query(`
       SELECT id FROM attendance
-      WHERE member_id = $1 AND gym_id = $2 AND date = $3 AND exit_at IS NULL
-    `, [member.id, parseInt(gymId), today]);
+      WHERE member_id = $1 AND gym_id = $2 AND date = (NOW() AT TIME ZONE 'America/Costa_Rica')::date AND exit_at IS NULL
+    `, [member.id, parseInt(gymId)]);
 
     res.json({ ...member, alreadyIn: attRes.rows.length > 0 });
   } catch (err) {
@@ -77,11 +76,10 @@ router.get("/inside", async (req, res) => {
   if (!memberId || !gymId) return res.status(400).json({ error: "Datos incompletos" });
 
   try {
-    const today = date || new Date().toISOString().split("T")[0];
     const result = await pool.query(`
       SELECT id FROM attendance
-      WHERE member_id = $1 AND gym_id = $2 AND date = $3 AND exit_at IS NULL
-    `, [parseInt(memberId), parseInt(gymId), today]);
+      WHERE member_id = $1 AND gym_id = $2 AND date = (NOW() AT TIME ZONE 'America/Costa_Rica')::date AND exit_at IS NULL
+    `, [parseInt(memberId), parseInt(gymId)]);
 
     res.json({
       inside: result.rows.length > 0,
@@ -121,18 +119,17 @@ router.post("/attendance", async (req, res) => {
     return res.status(400).json({ error: "Datos incompletos" });
 
   try {
-    const today = new Date().toISOString().split("T")[0];
     const existing = await pool.query(`
       SELECT id FROM attendance
-      WHERE member_id = $1 AND gym_id = $2 AND date = $3 AND exit_at IS NULL
-    `, [memberId, parseInt(gymId), today]);
+      WHERE member_id = $1 AND gym_id = $2 AND date = (NOW() AT TIME ZONE 'America/Costa_Rica')::date AND exit_at IS NULL
+    `, [memberId, parseInt(gymId)]);
 
     if (existing.rows.length > 0)
       return res.status(409).json({ error: "Este miembro ya esta dentro del gimnasio" });
 
     await pool.query(`
-      INSERT INTO attendance (gym_id, member_id, member_name, cedula, plan, type, created_by)
-      VALUES ($1, $2, $3, $4, $5, 'member', NULL)
+      INSERT INTO attendance (gym_id, member_id, member_name, cedula, plan, type, date, created_by)
+      VALUES ($1, $2, $3, $4, $5, 'member', (NOW() AT TIME ZONE 'America/Costa_Rica')::date, NULL)
     `, [parseInt(gymId), memberId, memberName, cedula || null, plan]);
 
     res.status(201).json({ ok: true });
