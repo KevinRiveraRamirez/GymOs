@@ -5,11 +5,14 @@ const { auth } = require("../middleware/auth");
 const router = express.Router();
 router.use(auth);
 
+// Fecha de hoy en Costa Rica
+const CR_TODAY = `(NOW() AT TIME ZONE 'America/Costa_Rica')::date`;
+
 // ── GET /api/attendance ──────────────────────────────────────────────────────
-// ?date=YYYY-MM-DD (default: hoy)
 router.get("/", async (req, res) => {
   const gymId = req.user.gymId;
-  const date  = req.query.date || new Date().toISOString().split("T")[0];
+  // Si viene date en query usarla, si no usar hoy en CR
+  const date = req.query.date || null;
 
   try {
     const result = await pool.query(`
@@ -17,18 +20,18 @@ router.get("/", async (req, res) => {
              TO_CHAR(attended_at AT TIME ZONE 'America/Costa_Rica', 'HH24:MI') AS time,
              TO_CHAR(exit_at AT TIME ZONE 'America/Costa_Rica', 'HH24:MI') AS exit_time
       FROM attendance
-      WHERE gym_id = $1 AND date = $2
+      WHERE gym_id = $1 AND date = ${date ? '$2' : CR_TODAY}
       ORDER BY attended_at DESC
-    `, [gymId, date]);
+    `, date ? [gymId, date] : [gymId]);
 
     res.json(result.rows);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Error al obtener asistencia" });
   }
 });
 
 // ── GET /api/attendance/stats ────────────────────────────────────────────────
-// Estadísticas de la semana actual
 router.get("/stats", async (req, res) => {
   const gymId = req.user.gymId;
   try {
@@ -36,7 +39,7 @@ router.get("/stats", async (req, res) => {
       SELECT date, COUNT(*) AS visits,
              COUNT(*) FILTER (WHERE type='visitor') AS visitors
       FROM attendance
-      WHERE gym_id=$1 AND date >= DATE_TRUNC('week', CURRENT_DATE)
+      WHERE gym_id=$1 AND date >= DATE_TRUNC('week', ${CR_TODAY})
       GROUP BY date ORDER BY date ASC
     `, [gymId]);
 
@@ -50,13 +53,12 @@ router.get("/stats", async (req, res) => {
 router.post("/", async (req, res) => {
   const { memberId, memberName, cedula, plan, type = "member" } = req.body;
   const gymId = req.user.gymId;
-  const today = new Date().toISOString().split("T")[0];
 
   // Verificar si ya registró hoy sin salida (solo para miembros)
   if (memberId) {
     const existing = await pool.query(
-      "SELECT id FROM attendance WHERE gym_id=$1 AND member_id=$2 AND date=$3 AND exit_at IS NULL",
-      [gymId, memberId, today]
+      `SELECT id FROM attendance WHERE gym_id=$1 AND member_id=$2 AND date=${CR_TODAY} AND exit_at IS NULL`,
+      [gymId, memberId]
     );
     if (existing.rows.length > 0)
       return res.status(409).json({ error: "Este miembro ya está dentro del gimnasio hoy" });
@@ -64,8 +66,8 @@ router.post("/", async (req, res) => {
 
   try {
     const result = await pool.query(`
-      INSERT INTO attendance (gym_id, member_id, member_name, cedula, plan, type, created_by)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      INSERT INTO attendance (gym_id, member_id, member_name, cedula, plan, type, date, created_by)
+      VALUES ($1,$2,$3,$4,$5,$6, ${CR_TODAY}, $7)
       RETURNING *,
         TO_CHAR(attended_at AT TIME ZONE 'America/Costa_Rica', 'HH24:MI') AS time,
         NULL AS exit_time
@@ -73,6 +75,7 @@ router.post("/", async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Error al registrar asistencia" });
   }
 });
