@@ -3,7 +3,7 @@ import { useAuth } from "./AuthContext";
 import api from "./api";
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
-const todayStr  = () => new Date().toISOString().split("T")[0];
+const todayStr  = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Costa_Rica" });
 const fmtDate   = (d) => {
   if(!d) return "—";
   const date = new Date(String(d).slice(0,10)+"T12:00:00");
