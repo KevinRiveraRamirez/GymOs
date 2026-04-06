@@ -133,4 +133,36 @@ router.post("/", async (req, res) => {
   }
 });
 
+// ── PUT /api/payments/:id ────────────────────────────────────────────────────
+// Solo admin puede editar pagos
+router.put("/:id", async (req, res) => {
+  if (req.user.role !== "admin")
+    return res.status(403).json({ error: "Solo administradores pueden editar pagos" });
+
+  const { method, amount, plan, discount = 0 } = req.body;
+  const gymId = req.user.gymId;
+
+  if (!method || !["SINPE","Efectivo"].includes(method))
+    return res.status(400).json({ error: "Método de pago inválido" });
+
+  const finalAmount = parseInt(amount);
+  if (!finalAmount || finalAmount <= 0)
+    return res.status(400).json({ error: "Monto inválido" });
+
+  try {
+    const result = await pool.query(`
+      UPDATE payments
+      SET method=$1, amount=$2, plan=$3, discount=$4, updated_at=NOW()
+      WHERE id=$5 AND gym_id=$6
+      RETURNING *
+    `, [method, finalAmount, plan, parseInt(discount), req.params.id, gymId]);
+
+    if (!result.rows[0]) return res.status(404).json({ error: "Pago no encontrado" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al editar pago" });
+  }
+});
+
 module.exports = router;

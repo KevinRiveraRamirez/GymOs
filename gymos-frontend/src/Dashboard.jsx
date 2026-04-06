@@ -565,6 +565,97 @@ _GymOS_`);
   );
 }
 
+// ─── EDIT PAYMENT MODAL ───────────────────────────────────────────────────────
+function EditPaymentModal({ payment, onClose, onSave }) {
+  const [method, setMethod]     = useState(payment.method);
+  const [amount, setAmount]     = useState(String(payment.amount));
+  const [plan, setPlan]         = useState(payment.plan);
+  const [discount, setDiscount] = useState(payment.discount||0);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
+
+  const raw   = parseInt(amount)||0;
+  const disc  = Math.round(raw*discount/100);
+  const final = raw-disc;
+
+  const handleSave = async()=>{
+    setLoading(true); setError("");
+    try {
+      await onSave({ method, amount:final, plan, discount });
+      onClose();
+    } catch(e){ setError(e.response?.data?.error||"Error al guardar"); }
+    finally{ setLoading(false); }
+  };
+
+  return (
+    <Modal title="Editar Pago" onClose={onClose}>
+      <ErrBox msg={error}/>
+      <div style={{ background:"#f8fafc", border:`1px solid ${T.border}`, borderRadius:10, padding:"10px 14px", marginBottom:16 }}>
+        <div style={{ color:T.text2, fontSize:12, fontWeight:600 }}>{payment.member_name}</div>
+        <div style={{ color:T.text3, fontSize:11 }}>Registrado: {fmtDate(payment.paid_at)}</div>
+      </div>
+      <Lbl>PLAN</Lbl>
+      <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+        {["Día","Semanal","Quincenal","Mensual","Bimensual"].map(p=>(
+          <button key={p} onClick={()=>setPlan(p)} style={{
+            flex:1, minWidth:70, padding:"8px 4px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
+            border:`2px solid ${plan===p?(PLAN_META[p]?.color||T.accent):T.border2}`,
+            background:plan===p?(PLAN_META[p]?.bg||T.accentBg):T.surface,
+            color:plan===p?(PLAN_META[p]?.color||T.accent):T.text2, fontSize:11, fontWeight:700
+          }}>{p}</button>
+        ))}
+      </div>
+      <Lbl>MÉTODO DE PAGO</Lbl>
+      <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+        {["SINPE","Efectivo"].map(m=>(
+          <button key={m} onClick={()=>setMethod(m)} style={{
+            flex:1, padding:"11px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
+            border:`2px solid ${method===m?T.accent:T.border2}`,
+            background:method===m?T.accentBg:T.surface,
+            color:method===m?T.accent:T.text2, fontSize:13, fontWeight:700
+          }}>{m==="SINPE"?"📱 SINPE":"💵 Efectivo"}</button>
+        ))}
+      </div>
+      <Lbl>MONTO (₡)</Lbl>
+      <div style={{ position:"relative", marginBottom:14 }}>
+        <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", color:T.text3, fontWeight:700 }}>₡</span>
+        <input type="number" min="0" value={amount} onChange={e=>setAmount(e.target.value)}
+          style={{ ...iStyle, marginBottom:0, paddingLeft:28, fontSize:16, fontWeight:700,
+            border:`2px solid ${amount?T.accent:T.border2}`, fontFamily:"'DM Mono',monospace" }}/>
+      </div>
+      <Lbl>DESCUENTO (%)</Lbl>
+      <div style={{ display:"flex", gap:6, marginBottom:16 }}>
+        {[0,5,10,15,20].map(d=>(
+          <button key={d} onClick={()=>setDiscount(d)} style={{
+            flex:1, padding:"8px 4px", borderRadius:9, cursor:"pointer", fontFamily:"inherit",
+            border:`2px solid ${discount===d?T.blue:T.border2}`,
+            background:discount===d?T.blueBg:T.surface,
+            color:discount===d?T.blue:T.text3, fontSize:11, fontWeight:700
+          }}>{d}%</button>
+        ))}
+      </div>
+      {raw>0 && disc>0 && (
+        <div style={{ background:"#f8fafc", border:`1px solid ${T.border}`, borderRadius:10, padding:"10px 14px", marginBottom:14 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+            <span style={{ color:T.text2, fontSize:12 }}>Descuento ({discount}%)</span>
+            <span style={{ color:T.red, fontSize:12 }}>-{fmtMoney(disc)}</span>
+          </div>
+          <div style={{ display:"flex", justifyContent:"space-between" }}>
+            <span style={{ color:T.text, fontWeight:700 }}>Total</span>
+            <span style={{ color:T.green, fontWeight:900, fontSize:18, fontFamily:"'DM Mono',monospace" }}>{fmtMoney(final)}</span>
+          </div>
+        </div>
+      )}
+      <div style={{ display:"flex", gap:8, marginTop:4 }}>
+        <Btn variant="ghost" onClick={onClose} style={{ flex:1 }}>Cancelar</Btn>
+        <Btn onClick={handleSave} disabled={!raw||loading} style={{ flex:2 }}>
+          {loading?"Guardando...":"Guardar Cambios"}
+        </Btn>
+      </div>
+    </Modal>
+  );
+}
+
 // ─── CASH REPORT ──────────────────────────────────────────────────────────────
 function CashReportModal({ onClose }) {
   const [period, setPeriod] = useState("day");
@@ -762,6 +853,7 @@ export default function Dashboard() {
   const [filterPlan, setFilterPlan]     = useState("all");
   const [toast, setToast]       = useState(null);
   const [loadingData, setLoadingData] = useState(false);
+  const [editPayment, setEditPayment] = useState(null);
 
   const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
 
@@ -818,6 +910,12 @@ export default function Dashboard() {
       if(entry){ await api.patch(`/attendance/${entry.id}/exit`); showToast(`↩ Salida: ${member.name}`); await loadAttendance(); }
       else { showToast("❌ No se encontró entrada activa","err"); }
     } catch(e){ showToast("❌ "+(e.response?.data?.error||"Error"),"err"); }
+  };
+
+  const updatePayment = async(id, data)=>{
+    await api.put(`/payments/${id}`, data);
+    showToast("✏️ Pago actualizado");
+    await loadPayments();
   };
 
   const registerPayment = async(data)=>{
@@ -1089,6 +1187,11 @@ export default function Dashboard() {
               <PlanTag plan={p.plan}/>
               {p.discount>0&&<span style={{ color:T.red, fontSize:10 }}>-{p.discount}%</span>}
               <span style={{ color:T.green, fontWeight:800, fontSize:14, fontFamily:"'DM Mono',monospace" }}>{fmtMoney(p.amount)}</span>
+              {user?.role==="admin" && (
+                <button onClick={()=>setEditPayment(p)} style={{ flexShrink:0, padding:"4px 10px", borderRadius:8,
+                  border:`1px solid ${T.border2}`, background:T.surface, color:T.text2,
+                  fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>✏️</button>
+              )}
             </div>
           ))}
         </div>
@@ -1262,7 +1365,11 @@ export default function Dashboard() {
         {modal==="member"     && <MemberModal onClose={()=>setModal(null)} onSave={saveMember}/>}
         {modal==="attendance" && <AttendanceModal members={members} todayAttendance={todayAtt} onClose={()=>setModal(null)} onMark={markAttendance} onExit={markExit}/>}
         {modal==="payment"    && <PaymentModal members={members} onClose={()=>setModal(null)} onSave={registerPayment}/>}
-        {modal==="cashreport" && <CashReportModal onClose={()=>setModal(null)}/>}
+        {modal==="cashreport" && <CashReportModal onClose={()=>setModal(null)}/>
+        {editPayment && (
+          <EditPaymentModal payment={editPayment} onClose={()=>setEditPayment(null)}
+            onSave={async(data)=>{ await updatePayment(editPayment.id, data); setEditPayment(null); }}/>
+        )}}
         {editMember && <MemberModal member={editMember} onClose={()=>setEditMember(null)} onSave={saveMember}/>}
         {selectedMember&&!editMember && renderMemberDetail()}
         {alertModal && <AlertListModal {...alertModal} onClose={()=>setAlertModal(null)} onSelectMember={m=>setSelectedMember(m)}/>}
