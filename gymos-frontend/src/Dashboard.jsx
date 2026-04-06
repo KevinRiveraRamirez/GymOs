@@ -658,13 +658,26 @@ function EditPaymentModal({ payment, onClose, onSave }) {
 
 // ─── CASH REPORT ──────────────────────────────────────────────────────────────
 function CashReportModal({ onClose }) {
-  const [period, setPeriod] = useState("day");
-  const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(true);
-  useEffect(()=>{ setLoading(true); api.get(`/payments/report?period=${period}`).then(r=>setReport(r.data)).finally(()=>setLoading(false)); },[period]);
+  const [period, setPeriod] = useState("month");
+  const now = new Date();
+  const [selMonth, setSelMonth] = useState(now.getMonth()+1);
+  const [selYear, setSelYear]   = useState(now.getFullYear());
+  const [report, setReport]     = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [showList, setShowList] = useState(false);
 
-  const periodLabel = period==="day"?"Día":period==="week"?"Semana":"Mes";
-  const periodTotal = period==="day"?"HOY":period==="week"?"ESTA SEMANA":"ESTE MES";
+  const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const YEARS  = [now.getFullYear()-1, now.getFullYear()];
+
+  useEffect(()=>{
+    setLoading(true);
+    let url = `/payments/report?period=${period}`;
+    if(period==="month") url += `&month=${selMonth}&year=${selYear}`;
+    api.get(url).then(r=>setReport(r.data)).finally(()=>setLoading(false));
+  },[period, selMonth, selYear]);
+
+  const periodLabel = period==="day"?"Día":period==="week"?"Semana":`${MONTHS[selMonth-1]} ${selYear}`;
+  const periodTotal = period==="day"?"HOY":period==="week"?"ESTA SEMANA":`${MONTHS[selMonth-1].toUpperCase()} ${selYear}`;
   const nowStr = new Date().toLocaleDateString("es-CR",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
 
   const fmtMoneyPDF = (n) => `c/${Number(n||0).toLocaleString("es-CR")}`;
@@ -782,13 +795,27 @@ function CashReportModal({ onClose }) {
 
   return (
     <Modal title="Cierre de Caja" onClose={onClose} width={520}>
-      <div style={{ display:"flex", gap:8, marginBottom:20 }}>
+      <div style={{ display:"flex", gap:8, marginBottom:14 }}>
         {[["day","Día"],["week","Semana"],["month","Mes"]].map(([k,l])=>(
           <button key={k} onClick={()=>setPeriod(k)} style={{ flex:1, padding:"9px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
             border:`2px solid ${period===k?T.green:T.border2}`, background:period===k?T.greenBg:T.surface,
             color:period===k?T.green:T.text2, fontSize:13, fontWeight:700 }}>{l}</button>
         ))}
       </div>
+      {period==="month" && (
+        <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+          <select value={selMonth} onChange={e=>setSelMonth(parseInt(e.target.value))}
+            style={{ flex:2, background:T.surface, border:`1.5px solid ${T.border2}`, borderRadius:9,
+              padding:"8px 12px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}>
+            {MONTHS.map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+          </select>
+          <select value={selYear} onChange={e=>setSelYear(parseInt(e.target.value))}
+            style={{ flex:1, background:T.surface, border:`1.5px solid ${T.border2}`, borderRadius:9,
+              padding:"8px 12px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}>
+            {YEARS.map(y=><option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+      )}
       {loading && <div style={{ textAlign:"center", color:T.text3, padding:30 }}>Cargando...</div>}
       {report && !loading && (
         <>
@@ -821,6 +848,32 @@ function CashReportModal({ onClose }) {
           }}>
             📄 Descargar PDF — {periodLabel}
           </button>
+          {report.payments?.length>0 && (
+            <div style={{ marginTop:16 }}>
+              <button onClick={()=>setShowList(v=>!v)} style={{ width:"100%", padding:"9px", borderRadius:10,
+                border:`1.5px solid ${T.border2}`, background:T.surface, color:T.text2,
+                fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer", marginBottom:10 }}>
+                {showList?"▲ Ocultar":"▼ Ver"} lista de pagos ({report.payments.length})
+              </button>
+              {showList && (
+                <div style={{ maxHeight:280, overflowY:"auto", display:"flex", flexDirection:"column", gap:5 }}>
+                  {report.payments.map((p,i)=>(
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
+                      background:"#f8fafc", borderRadius:9, border:`1px solid ${T.border}` }}>
+                      <span>{p.method==="SINPE"?"📱":"💵"}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ color:T.text, fontSize:12, fontWeight:600 }}>{p.member_name}</div>
+                        <div style={{ color:T.text3, fontSize:11 }}>{fmtDate(p.paid_at)} · {p.method}</div>
+                      </div>
+                      <PlanTag plan={p.plan}/>
+                      {p.discount>0&&<span style={{ color:T.red, fontSize:10 }}>-{p.discount}%</span>}
+                      <span style={{ color:T.green, fontWeight:800, fontSize:13, fontFamily:"'DM Mono',monospace" }}>{fmtMoney(p.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </Modal>

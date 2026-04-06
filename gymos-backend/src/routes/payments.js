@@ -42,15 +42,19 @@ router.get("/", async (req, res) => {
 
 // ── GET /api/payments/report ─────────────────────────────────────────────────
 router.get("/report", async (req, res) => {
-  const { period = "day" } = req.query;
+  const { period = "day", month, year } = req.query;
   const gymId = req.user.gymId;
 
   let dateFilter = `paid_at = ${CR_TODAY}`;
-  if (period === "week")  dateFilter = `paid_at >= DATE_TRUNC('week', ${CR_TODAY})`;
-  if (period === "month") dateFilter = `paid_at >= DATE_TRUNC('month', ${CR_TODAY})`;
+  if (period === "week") dateFilter = `paid_at >= DATE_TRUNC('week', ${CR_TODAY})`;
+  if (period === "month" && month && year) {
+    dateFilter = `EXTRACT(MONTH FROM paid_at) = ${parseInt(month)} AND EXTRACT(YEAR FROM paid_at) = ${parseInt(year)}`;
+  } else if (period === "month") {
+    dateFilter = `paid_at >= DATE_TRUNC('month', ${CR_TODAY})`;
+  }
 
   try {
-    const [totalsRes, byMethodRes, byPlanRes] = await Promise.all([
+    const [totalsRes, byMethodRes, byPlanRes, listRes] = await Promise.all([
       pool.query(`
         SELECT COUNT(*) AS transactions, COALESCE(SUM(amount),0) AS total,
                COUNT(*) FILTER (WHERE type='visitor') AS visitors
@@ -66,6 +70,11 @@ router.get("/report", async (req, res) => {
         FROM payments WHERE gym_id=$1 AND ${dateFilter}
         GROUP BY plan ORDER BY total DESC
       `, [gymId]),
+      pool.query(`
+        SELECT id, member_name, plan, amount, method, discount, type, paid_at
+        FROM payments WHERE gym_id=$1 AND ${dateFilter}
+        ORDER BY paid_at DESC, created_at DESC
+      `, [gymId]),
     ]);
 
     res.json({
@@ -76,6 +85,7 @@ router.get("/report", async (req, res) => {
       },
       byMethod: byMethodRes.rows.map(r=>({ method:r.method, count:Number(r.count), total:Number(r.total) })),
       byPlan:   byPlanRes.rows.map(r=>({ plan:r.plan, count:Number(r.count), total:Number(r.total) })),
+      payments: listRes.rows,
     });
   } catch (err) {
     console.error(err);
