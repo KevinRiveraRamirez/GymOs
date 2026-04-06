@@ -152,7 +152,7 @@ router.put("/:id", async (req, res) => {
   try {
     const result = await pool.query(`
       UPDATE payments
-      SET method=$1, amount=$2, plan=$3, discount=$4, updated_at=NOW()
+      SET method=$1, amount=$2, plan=$3, discount=$4
       WHERE id=$5 AND gym_id=$6
       RETURNING *
     `, [method, finalAmount, plan, parseInt(discount), req.params.id, gymId]);
