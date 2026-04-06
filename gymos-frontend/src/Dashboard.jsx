@@ -1365,7 +1365,7 @@ export default function Dashboard() {
         {modal==="member"     && <MemberModal onClose={()=>setModal(null)} onSave={saveMember}/>}
         {modal==="attendance" && <AttendanceModal members={members} todayAttendance={todayAtt} onClose={()=>setModal(null)} onMark={markAttendance} onExit={markExit}/>}
         {modal==="payment"    && <PaymentModal members={members} onClose={()=>setModal(null)} onSave={registerPayment}/>}
-        {modal==="cashreport" && <CashReportModal onClose={()=>setModal(null)}/>
+        {modal==="cashreport" && <CashReportModal onClose={()=>setModal(null)}/>}
         {editPayment && (
           <EditPaymentModal payment={editPayment} onClose={()=>setEditPayment(null)}
             onSave={async(data)=>{ await updatePayment(editPayment.id, data); setEditPayment(null); }}/>
