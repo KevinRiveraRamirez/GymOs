@@ -437,6 +437,8 @@ function AttendanceModal({ members, todayAttendance, onClose, onMark, onExit }) 
 // ─── ALERT MODAL ──────────────────────────────────────────────────────────────
 function AlertListModal({ title, members, color, icon, type, onClose, onSelectMember }) {
   const [notified, setNotified] = useState({});
+  const [seqMode, setSeqMode]   = useState(false);
+  const [seqIdx, setSeqIdx]     = useState(0);
   const cleanPhone = (p="")=>p.replace(/[^0-9]/g,"");
 
   const waMsg = (m)=>{
@@ -490,17 +492,24 @@ _GymOS_`);
     setNotified(prev=>({...prev,[m.id]:true}));
   };
 
-  const sendAll = ()=>{
-    members.filter(m=>!notified[m.id]).forEach((m,i)=>{
-      setTimeout(()=>{
-        window.open(`https://wa.me/506${cleanPhone(m.phone)}?text=${waMsg(m)}`,"_blank");
-        setNotified(prev=>({...prev,[m.id]:true}));
-      }, i*800);
-    });
-  };
-
   const pendientes = members.filter(m=>!notified[m.id]);
   const avisadosCount = Object.keys(notified).length;
+
+  const startSeq = ()=>{
+    const firstIdx = members.findIndex(m=>!notified[m.id]);
+    setSeqIdx(firstIdx>=0?firstIdx:0);
+    setSeqMode(true);
+  };
+
+  const sendSeq = ()=>{
+    const m = members[seqIdx];
+    window.open(`https://wa.me/506${cleanPhone(m.phone)}?text=${waMsg(m)}`,"_blank");
+    setNotified(prev=>({...prev,[m.id]:true}));
+    // Buscar siguiente pendiente
+    const next = members.findIndex((mb,i)=>i>seqIdx&&!notified[mb.id]&&mb.id!==m.id);
+    if(next>=0){ setSeqIdx(next); }
+    else { setSeqMode(false); }
+  };
 
   return (
     <Modal title={title} onClose={onClose} width={540}>
@@ -514,8 +523,53 @@ _GymOS_`);
         <span style={{ color:T.text3, fontSize:11 }}>Tocá 📱 para WhatsApp</span>
       </div>
 
-      {pendientes.length>0 ? (
-        <button onClick={sendAll} style={{ width:"100%", padding:"10px", borderRadius:10, marginBottom:14,
+      {seqMode ? (
+        // ── MODO SECUENCIAL ──
+        <div style={{ background:"#f0fdf4", border:`2px solid #86efac`, borderRadius:14, padding:18, marginBottom:14 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+            <span style={{ color:T.green, fontWeight:800, fontSize:14 }}>
+              📱 Enviando {seqIdx+1} de {members.length}
+            </span>
+            <button onClick={()=>setSeqMode(false)} style={{ background:"none", border:"none",
+              color:T.text3, fontSize:20, cursor:"pointer" }}>×</button>
+          </div>
+          {members[seqIdx] && (
+            <div style={{ background:T.surface, borderRadius:10, padding:14, marginBottom:12,
+              border:`1px solid ${T.border}` }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+                <Avatar name={members[seqIdx].name} size={38}/>
+                <div>
+                  <div style={{ color:T.text, fontWeight:700 }}>{members[seqIdx].name}</div>
+                  <div style={{ color:T.text3, fontSize:11 }}>📞 {members[seqIdx].phone}</div>
+                </div>
+                <PlanTag plan={members[seqIdx].plan}/>
+              </div>
+            </div>
+          )}
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={()=>setSeqMode(false)} style={{ flex:1, padding:"10px", borderRadius:10,
+              border:`1px solid ${T.border2}`, background:T.surface, color:T.text2,
+              fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+              Pausar
+            </button>
+            <button onClick={sendSeq} style={{ flex:2, padding:"10px", borderRadius:10, border:"none",
+              background:"#15803d", color:"#fff", fontFamily:"inherit", fontSize:13,
+              fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              📱 Enviar y siguiente →
+            </button>
+          </div>
+          <div style={{ marginTop:10 }}>
+            <div style={{ background:"#dcfce7", borderRadius:6, height:6 }}>
+              <div style={{ background:T.green, borderRadius:6, height:6,
+                width:`${(avisadosCount/members.length)*100}%`, transition:"width 0.3s" }}/>
+            </div>
+            <div style={{ color:T.text3, fontSize:11, marginTop:4, textAlign:"center" }}>
+              {avisadosCount} de {members.length} avisados
+            </div>
+          </div>
+        </div>
+      ) : pendientes.length>0 ? (
+        <button onClick={startSeq} style={{ width:"100%", padding:"10px", borderRadius:10, marginBottom:14,
           border:"1.5px solid #86efac", background:"#dcfce7", color:"#15803d",
           fontFamily:"inherit", fontSize:13, fontWeight:700, cursor:"pointer",
           display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
