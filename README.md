@@ -1,4 +1,4 @@
-# 💪 GymOS — Sistema de Administración de Gimnasio (SaaS)
+# 💪 FitControl — Sistema de Administración de Gimnasio (SaaS)
 
 > Sistema web multi-tenant para digitalizar la gestión de gimnasios pequeños y medianos.  
 > Stack: **React + Node.js + Express + PostgreSQL (Supabase)**
@@ -6,6 +6,19 @@
 🌐 **Producción:** https://gym-os-qtw7.vercel.app  
 ⚙️ **API:** https://gymos-production.up.railway.app  
 📱 **Kiosko tablet:** https://gym-os-qtw7.vercel.app/kiosko/:gymId
+
+---
+
+## 🚀 Estado actual
+
+| Dato | Valor |
+|------|-------|
+| Clientes activos | 1 gym (Vida y Salud) |
+| Miembros en producción | ~300 miembros |
+| Precio mensual | ₡25,000/mes por gym |
+| Uso de base de datos | 25.83 MB / 500 MB (5%) |
+| Uptime | Railway + Vercel + Supabase |
+| Marca comercial | **FitControl** — *"Tomá el control de tu gimnasio"* |
 
 ---
 
@@ -26,20 +39,22 @@
 13. [Flujo Git → Producción](#flujo-git--producción)
 14. [Modelo SaaS y multi-tenancy](#modelo-saas-y-multi-tenancy)
 15. [Decisiones técnicas](#decisiones-técnicas)
+16. [Changelog](#changelog)
 
 ---
 
 ## Descripción general
 
-GymOS permite a los administradores de gimnasios gestionar:
+FitControl permite a los administradores de gimnasios gestionar:
 
 - **Miembros** — registro, edición, bloqueo, eliminación con 5 planes disponibles
 - **Asistencia** — control de entrada y salida diaria desde el panel admin o desde la tablet kiosko
-- **Pagos** — registro de SINPE y Efectivo con descuentos configurables
-- **Cierre de caja** — reportes por día, semana y mes descargables en PDF
-- **Alertas** — notificaciones de membresías próximas a vencer (≤3 días) con envío por WhatsApp
+- **Pagos** — registro de SINPE y Efectivo con descuentos configurables y edición posterior
+- **Cierre de caja** — reportes por día, semana y mes específico descargables en PDF
+- **Historial mensual** — selector de mes/año para ver cualquier mes anterior con lista completa
+- **Alertas WhatsApp** — notificaciones secuenciales de membresías próximas a vencer (≤3 días)
 - **Lista negra** — bloqueo de miembros con registro de razón
-- **Kiosko tablet** — pantalla dedicada para que los miembros marquen su propia asistencia
+- **Kiosko tablet** — pantalla dedicada para que los miembros marquen su propia asistencia con entrada y salida
 
 El sistema es **multi-tenant**: cada gimnasio tiene sus datos completamente aislados mediante `gym_id` en todas las tablas.
 
@@ -61,6 +76,7 @@ Navegador (Admin) ──► React Frontend (Vercel) ──► Node.js + Express 
 - El backend se conecta a Supabase usando el **Session Pooler** para compatibilidad IPv4
 - Toda autenticación es por **JWT** firmado con `JWT_SECRET` (expiración 8h)
 - El kiosko usa endpoints públicos sin JWT, filtrados por `gymId` en la URL
+- Todas las fechas usan zona horaria `America/Costa_Rica` para evitar bugs de UTC
 
 ---
 
@@ -112,9 +128,9 @@ GymOs/
 │   │   │   └── auth.js           # JWT verification + adminOnly
 │   │   └── routes/
 │   │       ├── auth.js           # Login, perfil, contraseña
-│   │       ├── members.js        # CRUD miembros + alertas
-│   │       ├── payments.js       # Pagos + cierre de caja
-│   │       ├── attendance.js     # Asistencia + estadísticas
+│   │       ├── members.js        # CRUD miembros + alertas + status en tiempo real
+│   │       ├── payments.js       # Pagos + edición + cierre de caja histórico
+│   │       ├── attendance.js     # Asistencia + estadísticas (zona horaria CR)
 │   │       ├── gyms.js           # Registro SaaS + staff
 │   │       └── kiosko.js         # Endpoints públicos para tablet kiosko
 │   └── package.json
@@ -128,7 +144,7 @@ GymOs/
 │   │   ├── Login.jsx             # Pantalla de login
 │   │   ├── Dashboard.jsx         # UI completa del panel admin
 │   │   └── Kiosko.jsx            # Pantalla tablet de asistencia
-│   ├── dist/                     # Build de producción (generado con npm run build)
+│   ├── dist/                     # Build de producción
 │   └── package.json
 │
 ├── vercel.json                   # Config Vercel — outputDirectory + rewrites SPA
@@ -173,9 +189,9 @@ GymOs/
 | name | VARCHAR | Nombre completo |
 | phone | VARCHAR | Teléfono (para WhatsApp) |
 | plan | VARCHAR | `Día`, `Semanal`, `Quincenal`, `Mensual`, `Bimensual` |
-| status | VARCHAR | `active` o `inactive` |
-| joined_at | DATE | **Fecha de ingreso editable por el admin** |
-| expires_at | DATE | Vencimiento calculado automáticamente desde joined_at + días del plan |
+| status | VARCHAR | Campo legacy — el status real se calcula en tiempo real |
+| joined_at | DATE | Fecha de ingreso editable por el admin |
+| expires_at | DATE | Vencimiento = joined_at + días del plan |
 | blocked | BOOLEAN | Si está en lista negra |
 | blacklist_reason | VARCHAR | Razón del bloqueo |
 | family_group | VARCHAR | Grupo familiar (opcional) |
@@ -207,7 +223,7 @@ GymOs/
 | type | VARCHAR | `member` o `visitor` |
 | attended_at | TIMESTAMP | Timestamp de entrada |
 | exit_at | TIMESTAMP | Timestamp de salida (nullable — null = dentro) |
-| date | DATE | Fecha del día (para filtros) |
+| date | DATE | Fecha en zona horaria CR (para filtros) |
 | created_by | INTEGER FK | Usuario que marcó (null si fue desde kiosko) |
 
 ---
@@ -234,11 +250,11 @@ GymOs/
 ### Miembros
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| GET | `/members` | JWT | Listar miembros (filtros: search, status, plan) |
+| GET | `/members` | JWT | Listar miembros — status calculado en tiempo real |
 | GET | `/members/alerts` | JWT | Miembros próximos a vencer (≤3 días) |
 | GET | `/members/:id` | JWT | Detalle + historial pagos y asistencia |
 | POST | `/members` | JWT | Registrar nuevo miembro |
-| PUT | `/members/:id` | JWT | Editar miembro (incluye fecha de ingreso y plan) |
+| PUT | `/members/:id` | JWT | Editar miembro (fecha de ingreso y plan recalcula vencimiento) |
 | PATCH | `/members/:id/block` | Admin | Bloquear / desbloquear |
 | DELETE | `/members/:id` | Admin | Eliminar miembro |
 
@@ -247,14 +263,15 @@ GymOs/
 |--------|------|------|-------------|
 | GET | `/payments` | JWT | Historial de pagos |
 | POST | `/payments` | JWT | Registrar pago — extiende vencimiento automáticamente |
-| GET | `/payments/report` | JWT | Cierre de caja `?period=day/week/month` |
+| PUT | `/payments/:id` | Admin | Editar pago (método, monto, plan, descuento) |
+| GET | `/payments/report` | JWT | Cierre de caja `?period=day/week/month&month=N&year=YYYY` |
 
 ### Asistencia
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
 | GET | `/attendance` | JWT | Asistencia del día `?date=YYYY-MM-DD` |
-| POST | `/attendance` | JWT | Registrar entrada desde panel admin |
-| PATCH | `/attendance/:id/exit` | JWT | Registrar salida desde panel admin |
+| POST | `/attendance` | JWT | Registrar entrada — fecha en zona horaria CR |
+| PATCH | `/attendance/:id/exit` | JWT | Registrar salida |
 | GET | `/attendance/stats` | JWT | Estadísticas de la semana |
 
 ### Kiosko (público — sin JWT)
@@ -262,7 +279,7 @@ GymOs/
 |--------|------|-------------|
 | GET | `/kiosko/search?q=...&gymId=...` | Búsqueda en tiempo real por nombre o cédula |
 | GET | `/kiosko/inside?memberId=...&gymId=...` | Verifica si el miembro ya está dentro |
-| POST | `/kiosko/attendance` | Registrar entrada desde tablet |
+| POST | `/kiosko/attendance` | Registrar entrada — fecha en zona horaria CR |
 | PATCH | `/kiosko/attendance/:id/exit` | Registrar salida desde tablet |
 
 ---
@@ -274,8 +291,8 @@ GymOs/
 |---------|-------------|
 | Dashboard | Resumen en tiempo real — actualización cada 3 segundos |
 | Miembros | Lista filtrable por nombre, cédula, estado y plan |
-| Asistencia | Control de entrada/salida del día |
-| Pagos | Historial del mes + cierre de caja PDF |
+| Asistencia | Control de entrada/salida del día con botón salida directo |
+| Pagos | Historial del mes + edición de pagos + cierre de caja histórico |
 | Lista Negra | Miembros bloqueados con razón |
 
 ### Componentes principales
@@ -285,11 +302,12 @@ GymOs/
 | `MemberModal` | Registro/edición con fecha de ingreso y 5 planes |
 | `AttendanceModal` | Control de entrada y salida con búsqueda |
 | `PaymentModal` | Registro de pagos con montos sugeridos y descuentos |
-| `CashReportModal` | Cierre de caja con descarga PDF (jsPDF) |
-| `AlertListModal` | Alertas de vencimiento con envío masivo WhatsApp |
+| `EditPaymentModal` | Edición de pagos existentes (solo admin) |
+| `CashReportModal` | Cierre de caja con selector mes/año + lista + PDF |
+| `AlertListModal` | Alertas WhatsApp en modo secuencial uno por uno |
 | `Avatar` | Avatar con iniciales y color determinístico |
 | `PlanTag` | Badge de plan con color por tipo |
-| `StatusBadge` | Badge de estado (Activo/Vencido/Inactivo/Bloqueado) |
+| `StatusBadge` | Badge de estado calculado en tiempo real |
 
 ### Planes disponibles
 | Plan | Días | Color |
@@ -304,19 +322,17 @@ GymOs/
 
 ## Pantalla Kiosko
 
-Pantalla dedicada para tablet en la entrada del gimnasio. Los miembros marcan su propia asistencia sin acceso al panel admin.
+Pantalla dedicada para tablet en la entrada del gimnasio.
 
 **URL:** `https://gym-os-qtw7.vercel.app/kiosko/:gymId`
 
-- Cada gimnasio tiene su propia URL con su `gymId`
-- Búsqueda en tiempo real por **nombre o cédula** con debounce de 300ms
-- Muestra plan y estado del miembro al seleccionarlo
-- **Activo** → puede marcar entrada (verde) o salida (naranja) según corresponda
-- **Vencido** → muestra mensaje de pago requerido, sin botón de entrada
+- Búsqueda en tiempo real por nombre o cédula (debounce 300ms)
+- **Activo** → puede marcar entrada (verde) o salida (naranja)
+- **Vencido** → muestra aviso de pago requerido, sin botón de entrada
 - **Bloqueado** → muestra mensaje de acceso restringido
-- Vuelve automáticamente a la pantalla inicial después de 4 segundos
-- No requiere JWT — endpoints públicos filtrados por gymId
-- La asistencia marcada desde el kiosko aparece en el panel admin en ~3 segundos
+- Vuelve automáticamente a pantalla inicial después de 4 segundos
+- Fecha registrada en zona horaria Costa Rica
+- La asistencia aparece en el panel admin en ~3 segundos
 
 ---
 
@@ -352,30 +368,19 @@ FRONTEND_URL=https://gym-os-qtw7.vercel.app
 VITE_API_URL=https://gymos-production.up.railway.app/api
 ```
 
-> ⚠️ **IMPORTANTE:** Los archivos `.env` están en `.gitignore` y nunca deben subirse al repositorio. Las variables de producción se configuran en Railway (backend) y están embebidas en el build de Vite (frontend).
+> ⚠️ Los archivos `.env` están en `.gitignore` y nunca deben subirse al repositorio.
 
 ---
 
 ## Instalación local
 
-### Requisitos
-- Node.js v18+
-- Cuenta en [Supabase](https://supabase.com)
-
 ### Backend
 ```bash
 cd gymos-backend
 npm install
-
-# Crear archivo .env con DATABASE_URL y JWT_SECRET
-# Crear tablas
+# Crear .env con DATABASE_URL y JWT_SECRET
 node src/db/migrate.js
 node src/db/migrate_exit.js
-
-# Datos de prueba (opcional)
-node src/db/seed.js
-
-# Iniciar servidor
 npm run dev
 ```
 
@@ -383,8 +388,7 @@ npm run dev
 ```bash
 cd gymos-frontend
 npm install
-
-# Crear archivo .env con VITE_API_URL=http://localhost:3001/api
+# Crear .env con VITE_API_URL=http://localhost:3001/api
 npm run dev
 ```
 
@@ -406,28 +410,12 @@ Kiosko:   http://localhost:5173/kiosko/1
 | Frontend | Vercel | gym-os-qtw7.vercel.app |
 | Base de datos | Supabase | aws-1-us-east-1.pooler.supabase.com |
 
-### Variables en Railway
-Configurar en el panel de Railway → Variables:
-- `DATABASE_URL` — Session Pooler de Supabase
-- `JWT_SECRET` — clave secreta
-- `FRONTEND_URL` — URL de Vercel
-
-### vercel.json (raíz del proyecto)
-```json
-{
-  "buildCommand": "ls",
-  "outputDirectory": "gymos-frontend/dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-}
-```
-
 ---
 
 ## Flujo Git → Producción
 
 ### Cambios en el backend
 ```bash
-# Editás código en gymos-backend/src/
 git add gymos-backend/
 git commit -m "feat: descripción"
 git push
@@ -436,9 +424,8 @@ git push
 
 ### Cambios en el frontend
 ```bash
-# Editás código en gymos-frontend/src/
 cd gymos-frontend
-npm run build          # Compilar dist
+npm run build
 cd ..
 git add .
 git commit -m "feat: descripción"
@@ -450,18 +437,13 @@ git push
 
 ## Modelo SaaS y multi-tenancy
 
-Cada gimnasio se registra y recibe su propio `gym_id`. **Todas** las tablas tienen `gym_id` obligatorio y todos los queries filtran por él — el `gym_id` se extrae del JWT (no del request del cliente).
-
-```
-gym A (gym_id=1) ──► solo ve sus members, payments, attendance
-gym B (gym_id=2) ──► solo ve sus members, payments, attendance
-```
+Cada gimnasio tiene su propio `gym_id`. Todas las tablas filtran por él — extraído del JWT, no del request del cliente.
 
 ### Capacidad estimada
-| Plan Supabase | Storage | Filas aprox. | Gymnasios aprox. |
-|--------------|---------|-------------|-----------------|
-| Gratuito | 500 MB | ~500,000 | ~15 gyms activos |
-| Pro ($25/mes) | 8 GB | Millones | Cientos de gyms |
+| Plan Supabase | Storage | Gymnasios aprox. |
+|--------------|---------|-----------------|
+| Gratuito | 500 MB | ~15 gyms activos |
+| Pro ($25/mes) | 8 GB | Cientos de gyms |
 
 ---
 
@@ -471,19 +453,48 @@ gym B (gym_id=2) ──► solo ve sus members, payments, attendance
 |----------|-------|
 | 5 planes (Día/Semanal/Quincenal/Mensual/Bimensual) | Cubre el 100% de modelos de gimnasios pequeños en CR |
 | Fecha de ingreso editable | Permite migrar miembros existentes con sus fechas reales |
-| Al pagar: `GREATEST(expires_at, HOY) + días` | El miembro no pierde días si paga antes de vencer |
-| `paid_at` como `DATE` zona CR | Evita bugs de UTC al filtrar pagos del día |
-| `TO_CHAR(expires_at, 'YYYY-MM-DD')` | Supabase devuelve timestamps completos; string limpio evita comparaciones incorrectas |
-| `exit_at` nullable | `exit_at IS NULL` = miembro dentro del gym en tiempo real |
+| Status calculado en tiempo real | `expires_at < CURRENT_DATE` evita inconsistencias entre BD y UI |
+| `GREATEST(expires_at, HOY) + días` al pagar | El miembro no pierde días si paga antes de vencer |
+| Zona horaria CR en todas las fechas | Evita bugs de UTC — pagos y asistencia siempre en hora local |
+| Edición de pagos solo admin | Control de auditoría — staff no puede modificar registros |
+| WhatsApp secuencial | El navegador bloquea múltiples `window.open` — modo uno por uno evita el bloqueo |
 | Kiosko sin JWT | La tablet no necesita login — filtrado por gymId en URL |
 | URL dinámica `/kiosko/:gymId` | Cada gym tiene su propio kiosko, datos aislados |
 | Actualización cada 3s en panel admin | Refleja casi instantáneamente las entradas del kiosko |
-| jsPDF en el cliente | Sin dependencia de servidor para PDFs |
-| WhatsApp via `wa.me` | Sin API de pago, mensaje pre-escrito directo al teléfono |
 | dist compilado en Git | Workaround para Vercel con monorepo |
 | Session Pooler Supabase | Railway usa IPv4 — Direct connection no compatible sin add-on |
-| trust proxy en Railway | Necesario para express-rate-limit con proxy reverso |
 
 ---
 
-*GymOS v1.0 — Desarrollado por Kevin Rivera | Marzo 2026*
+## Changelog
+
+### v1.2 — Abril 2026
+- ✅ Edición de pagos registrados (solo admin) — método, monto, plan, descuento
+- ✅ Historial mensual en cierre de caja — selector de mes/año con lista completa de pagos
+- ✅ WhatsApp secuencial — evita bloqueo del navegador, modo uno por uno con barra de progreso
+- ✅ Fix zona horaria CR en asistencia — fecha se registraba en UTC causando día incorrecto
+- ✅ Fix zona horaria CR en kiosko — mismo bug corregido en endpoints públicos
+- ✅ Validación gymId NaN en kiosko search
+
+### v1.1 — Marzo 2026
+- ✅ Status calculado en tiempo real — `expires_at < CURRENT_DATE`
+- ✅ Kiosko con entrada y salida para miembros
+- ✅ Kiosko bloquea entrada a miembros vencidos
+- ✅ URL dinámica `/kiosko/:gymId` para múltiples gyms
+- ✅ Búsqueda en tiempo real en kiosko por nombre y cédula
+- ✅ Fix fecha de ingreso al editar miembro
+- ✅ Renovación correcta al pagar — `GREATEST(expires_at, HOY) + días`
+- ✅ Mensajes WhatsApp dinámicos para los 5 planes
+
+### v1.0 — Marzo 2026
+- ✅ Sistema completo en producción
+- ✅ Primer cliente — Vida y Salud (₡25,000/mes)
+- ✅ 5 planes con fechas de ingreso editables
+- ✅ Panel kiosko para tablet
+- ✅ Cierre de caja PDF
+- ✅ Alertas WhatsApp
+- ✅ Multi-tenant por gym_id
+
+---
+
+*FitControl v1.2 — Desarrollado por Kevin Rivera & Ignacio Rodríguez | Abril 2026*
