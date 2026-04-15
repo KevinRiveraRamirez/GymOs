@@ -139,4 +139,24 @@ router.post("/attendance", async (req, res) => {
   }
 });
 
-module.exports = router; 
+// ── POST /api/kiosko/denied ──────────────────────────────────────────────────
+// Registra acceso denegado desde la tablet kiosko
+router.post("/denied", async (req, res) => {
+  const { gymId, memberName, cedula, reason } = req.body;
+  if (!gymId || !memberName) return res.status(400).json({ error: "Datos incompletos" });
+
+  const CR_TODAY_EXPR = "(NOW() AT TIME ZONE 'America/Costa_Rica')::date";
+  try {
+    await pool.query(`
+      INSERT INTO attendance (gym_id, member_id, member_name, cedula, plan, type, date, notes, created_by)
+      VALUES ($1, NULL, $2, $3, 'N/A', 'denied', ${CR_TODAY_EXPR}, $4, NULL)
+    `, [parseInt(gymId), memberName, cedula || null, reason || 'Acceso denegado']);
+
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al registrar acceso denegado" });
+  }
+});
+
+module.exports = router;

@@ -78,7 +78,11 @@ export default function Kiosko() {
   const handleSelectWithCheck = useCallback(async (m) => {
     setResults([]);
     setQuery(m.name);
-    if (m.blocked) { setMember(m); setState("blocked"); scheduleReset(); return; }
+    if (m.blocked) {
+      setMember(m); setState("blocked"); scheduleReset();
+      api.post(`/kiosko/denied`, { gymId: GYM_ID, memberName: m.name, cedula: m.cedula, reason: `Bloqueado: ${m.blacklist_reason||'Sin razón especificada'}` }).catch(()=>{});
+      return;
+    }
     setState("searching");
     try {
       const today = new Date().toISOString().split("T")[0];
@@ -267,6 +271,11 @@ export default function Kiosko() {
 
             {member.status !== "active" ? (
               <>
+                {/* Registrar acceso denegado automáticamente */}
+                {!member._deniedLogged && (() => {
+                  api.post(`/kiosko/denied`, { gymId: GYM_ID, memberName: member.name, cedula: member.cedula, reason: `Membresia vencida desde ${fmtDate(member.expires_at)}` }).catch(()=>{});
+                  member._deniedLogged = true;
+                })()}
                 <div style={{ background:"#dc262618", border:"1px solid #dc262644",
                   borderRadius:16, padding:"20px", marginBottom:16, textAlign:"center" }}>
                   <div style={{ fontSize:40, marginBottom:10 }}>⚠️</div>

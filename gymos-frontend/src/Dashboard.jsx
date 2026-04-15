@@ -414,17 +414,26 @@ function AttendanceModal({ members, todayAttendance, onClose, onMark, onExit }) 
         <div style={{ maxHeight:190, overflowY:"auto", display:"flex", flexDirection:"column", gap:5 }}>
           {[...todayAttendance].reverse().map((a,i)=>(
             <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px",
-              background:"#f8fafc", borderRadius:9, border:`1px solid ${T.border}` }}>
+              background:a.type==="denied"?"#fee2e2":"#f8fafc", borderRadius:9,
+              border:`1px solid ${a.type==="denied"?"#fca5a5":T.border}` }}>
               <span style={{ width:8, height:8, borderRadius:"50%", flexShrink:0,
-                background:a.exit_time?T.text3:T.green }}/>
+                background:a.type==="denied"?T.red:a.exit_time?T.text3:T.green }}/>
               <Avatar name={a.member_name} size={26}/>
-              <span style={{ flex:1, color:T.text, fontSize:12, fontWeight:600 }}>{a.member_name}</span>
-              <span style={{ color:T.text3, fontSize:11, fontFamily:"'DM Mono',monospace" }}>
-                ▶{a.time}{a.exit_time && ` ↩${a.exit_time}`}
-              </span>
-              {a.exit_time
-                ? <span style={{ fontSize:10, color:T.text3, background:"#f1f5f9", padding:"2px 7px", borderRadius:10 }}>Salió</span>
-                : <span style={{ fontSize:10, color:T.green, background:T.greenBg, padding:"2px 7px", borderRadius:10 }}>Dentro</span>}
+              <div style={{ flex:1 }}>
+                <span style={{ color:T.text, fontSize:12, fontWeight:600 }}>{a.member_name}</span>
+                {a.type==="denied" && a.notes && <div style={{ color:T.red, fontSize:10 }}>⛔ {a.notes}</div>}
+              </div>
+              {a.type==="denied"
+                ? <span style={{ fontSize:10, color:T.red, background:"#fee2e2", padding:"2px 7px", borderRadius:10, fontWeight:700 }}>Denegado</span>
+                : <>
+                    <span style={{ color:T.text3, fontSize:11, fontFamily:"'DM Mono',monospace" }}>
+                      ▶{a.time}{a.exit_time && ` ↩${a.exit_time}`}
+                    </span>
+                    {a.exit_time
+                      ? <span style={{ fontSize:10, color:T.text3, background:"#f1f5f9", padding:"2px 7px", borderRadius:10 }}>Salió</span>
+                      : <span style={{ fontSize:10, color:T.green, background:T.greenBg, padding:"2px 7px", borderRadius:10 }}>Dentro</span>}
+                  </>
+              }
             </div>
           ))}
           {todayAttendance.length===0 && <div style={{ color:T.text3, fontSize:12, textAlign:"center", padding:16 }}>Sin registros hoy</div>}
@@ -1241,21 +1250,34 @@ export default function Dashboard() {
         {todayAtt.length===0&&<div style={{ color:T.text3, fontSize:12, textAlign:"center", padding:30 }}>Sin entradas aún</div>}
         <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
           {[...todayAtt].reverse().map((a,i)=>(
-            <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background:"#f8fafc", borderRadius:10, border:`1px solid ${a.exit_time?T.border:"#86efac"}` }}>
-              <span style={{ width:9, height:9, borderRadius:"50%", flexShrink:0, background:a.exit_time?T.text3:T.green }}/>
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px",
+              background: a.type==="denied"?"#fee2e2":"#f8fafc", borderRadius:10,
+              border:`1px solid ${a.type==="denied"?"#fca5a5":a.exit_time?T.border:"#86efac"}` }}>
+              <span style={{ width:9, height:9, borderRadius:"50%", flexShrink:0,
+                background:a.type==="denied"?T.red:a.exit_time?T.text3:T.green }}/>
               <Avatar name={a.member_name} size={32}/>
-              <span style={{ flex:1, color:T.text, fontSize:13, fontWeight:600 }}>{a.member_name}</span>
-              <PlanTag plan={a.plan}/>
-              <div style={{ color:T.text2, fontSize:11, fontFamily:"'DM Mono',monospace", textAlign:"right", minWidth:80 }}>
-                <div>▶{a.time}{a.exit_time&&` ↩${a.exit_time}`}</div>
+              <div style={{ flex:1 }}>
+                <span style={{ color:T.text, fontSize:13, fontWeight:600 }}>{a.member_name}</span>
+                {a.type==="denied" && a.notes && (
+                  <div style={{ color:T.red, fontSize:10, marginTop:2 }}>⛔ {a.notes}</div>
+                )}
               </div>
-              {a.exit_time
-                ? <span style={{ fontSize:10, color:T.text3, background:"#f1f5f9", padding:"3px 9px", borderRadius:10, flexShrink:0 }}>Salió</span>
-                : <button onClick={async()=>{ await api.patch(`/attendance/${a.id}/exit`); await loadAttendance(); showToast(`↩ Salida: ${a.member_name}`); }}
-                    style={{ flexShrink:0, padding:"4px 11px", borderRadius:8, border:`1.5px solid ${T.orange}`,
-                      background:T.orangeBg, color:T.orange, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
-                    ↩ Salida
-                  </button>}
+              {a.type==="denied"
+                ? <span style={{ fontSize:10, color:T.red, background:"#fee2e2", padding:"3px 9px", borderRadius:10, flexShrink:0, fontWeight:700, border:"1px solid #fca5a5" }}>Acceso denegado</span>
+                : <>
+                    <PlanTag plan={a.plan}/>
+                    <div style={{ color:T.text2, fontSize:11, fontFamily:"'DM Mono',monospace", textAlign:"right", minWidth:80 }}>
+                      <div>▶{a.time}{a.exit_time&&` ↩${a.exit_time}`}</div>
+                    </div>
+                    {a.exit_time
+                      ? <span style={{ fontSize:10, color:T.text3, background:"#f1f5f9", padding:"3px 9px", borderRadius:10, flexShrink:0 }}>Salió</span>
+                      : <button onClick={async()=>{ await api.patch(`/attendance/${a.id}/exit`); await loadAttendance(); showToast(`↩ Salida: ${a.member_name}`); }}
+                          style={{ flexShrink:0, padding:"4px 11px", borderRadius:8, border:`1.5px solid ${T.orange}`,
+                            background:T.orangeBg, color:T.orange, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                          ↩ Salida
+                        </button>}
+                  </>
+              }
             </div>
           ))}
         </div>
