@@ -409,7 +409,7 @@ function AttendanceModal({ members, todayAttendance, onClose, onMark, onExit }) 
       )}
       <div style={{ borderTop:`1px solid ${T.border}`, marginTop:18, paddingTop:14 }}>
         <div style={{ fontSize:11, color:T.text3, fontWeight:700, marginBottom:8, letterSpacing:"0.5px" }}>
-          HOY — {todayAttendance.length} REGISTROS
+          HOY — {todayAttendance.filter(a=>a.type!=="denied").length} REGISTROS
         </div>
         <div style={{ maxHeight:190, overflowY:"auto", display:"flex", flexDirection:"column", gap:5 }}>
           {[...todayAttendance].reverse().map((a,i)=>(
@@ -1122,7 +1122,7 @@ export default function Dashboard() {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
         {[
           { icon:"👥", label:"Miembros Activos", val:activeCount, color:"#6366f1", bg:"#eef2ff" },
-          { icon:"📋", label:"Asistencia Hoy",   val:todayAtt.length, color:T.blue, bg:T.blueBg },
+          { icon:"📋", label:"Asistencia Hoy",   val:todayAtt.filter(a=>a.type!=="denied").length, color:T.blue, bg:T.blueBg },
           { icon:"💰", label:"Ingresos Hoy",     val:fmtMoney(todayTotal), color:T.green, bg:T.greenBg },
           { icon:"🚫", label:"Bloqueados",        val:blockedCount, color:T.red, bg:T.redBg },
         ].map(s=>(
@@ -1233,7 +1233,7 @@ export default function Dashboard() {
     <div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:16 }}>
         {[
-          { label:"Total hoy", val:todayAtt.length, color:"#6366f1" },
+          { label:"Total hoy", val:todayAtt.filter(a=>a.type!=="denied").length, color:"#6366f1" },
           { label:"Dentro ahora", val:todayAtt.filter(a=>!a.exit_time&&a.type==="member").length, color:T.green },
           { label:"Visitantes", val:todayAtt.filter(a=>a.type==="visitor").length, color:T.yellow },
         ].map(s=>(
