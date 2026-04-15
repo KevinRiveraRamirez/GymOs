@@ -13,10 +13,10 @@ const fmtDate   = (d) => {
 const fmtMoney  = (n) => `₡${Number(n||0).toLocaleString("es-CR")}`;
 const fmt12h = (t) => {
   if(!t) return "";
-  const [h,m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const h12  = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2,"0")} ${ampm}`;
+  try {
+    const d = new Date(t);
+    return d.toLocaleTimeString("es-CR", { hour:"2-digit", minute:"2-digit", hour12:true, timeZone:"America/Costa_Rica" });
+  } catch { return t; }
 };
 const diffDays  = (d) => {
   if(!d) return 0;
@@ -348,8 +348,8 @@ function AttendanceModal({ members, todayAttendance, onClose, onMark, onExit }) 
   const [visitorMode, setVisitorMode] = useState(false);
   const [selMember, setSelMember] = useState(null);
   const [loading, setLoading] = useState(false);
-  const alreadyIn  = selMember && todayAttendance.some(a=>Number(a.member_id)===Number(selMember.id) && !a.exit_time);
-  const alreadyOut = selMember && todayAttendance.some(a=>Number(a.member_id)===Number(selMember.id) && !!a.exit_time);
+  const alreadyIn  = selMember && todayAttendance.some(a=>Number(a.member_id)===Number(selMember.id) && !a.exit_at);
+  const alreadyOut = selMember && todayAttendance.some(a=>Number(a.member_id)===Number(selMember.id) && !!a.exit_at);
   const canEnter = selMember && !selMember.blocked && !alreadyIn;
   const handleMark = async(m)=>{ setLoading(true); await onMark(m); setSelMember(null); setLoading(false); };
   const handleExit = async(m)=>{ setLoading(true); await onExit(m); setSelMember(null); setLoading(false); };
@@ -424,7 +424,7 @@ function AttendanceModal({ members, todayAttendance, onClose, onMark, onExit }) 
               background:a.type==="denied"?"#fee2e2":"#f8fafc", borderRadius:9,
               border:`1px solid ${a.type==="denied"?"#fca5a5":T.border}` }}>
               <span style={{ width:8, height:8, borderRadius:"50%", flexShrink:0,
-                background:a.type==="denied"?T.red:a.exit_time?T.text3:T.green }}/>
+                background:a.type==="denied"?T.red:a.exit_at?T.text3:T.green }}/>
               <Avatar name={a.member_name} size={26}/>
               <div style={{ flex:1 }}>
                 <span style={{ color:T.text, fontSize:12, fontWeight:600 }}>{a.member_name}</span>
@@ -434,9 +434,9 @@ function AttendanceModal({ members, todayAttendance, onClose, onMark, onExit }) 
                 ? <span style={{ fontSize:10, color:T.red, background:"#fee2e2", padding:"2px 7px", borderRadius:10, fontWeight:700 }}>Denegado</span>
                 : <>
                     <span style={{ color:T.text3, fontSize:11, fontFamily:"'DM Mono',monospace" }}>
-                      ▶{fmt12h(a.time)}{a.exit_time && ` ↩${fmt12h(a.exit_time)}`}
+                      ▶{fmt12h(a.attended_at)}{a.exit_at && ` ↩${fmt12h(a.exit_at)}`}
                     </span>
-                    {a.exit_time
+                    {a.exit_at
                       ? <span style={{ fontSize:10, color:T.text3, background:"#f1f5f9", padding:"2px 7px", borderRadius:10 }}>Salió</span>
                       : <span style={{ fontSize:10, color:T.green, background:T.greenBg, padding:"2px 7px", borderRadius:10 }}>Dentro</span>}
                   </>
@@ -1029,7 +1029,7 @@ export default function Dashboard() {
 
   const markExit = async(member)=>{
     try {
-      const entry = attendance.find(a=>Number(a.member_id)===Number(member.id) && !a.exit_time);
+      const entry = attendance.find(a=>Number(a.member_id)===Number(member.id) && !a.exit_at);
       if(entry){ await api.patch(`/attendance/${entry.id}/exit`); showToast(`↩ Salida: ${member.name}`); await loadAttendance(); }
       else { showToast("❌ No se encontró entrada activa","err"); }
     } catch(e){ showToast("❌ "+(e.response?.data?.error||"Error"),"err"); }
@@ -1154,7 +1154,7 @@ export default function Dashboard() {
               <Avatar name={a.member_name} size={28}/>
               <span style={{ flex:1, color:T.text, fontSize:12, fontWeight:600 }}>{a.member_name}</span>
               <span style={{ color:T.text3, fontSize:11, fontFamily:"'DM Mono',monospace" }}>{a.time}</span>
-              <span style={{ width:7, height:7, borderRadius:"50%", background:a.exit_time?T.text3:T.green }}/>
+              <span style={{ width:7, height:7, borderRadius:"50%", background:a.exit_at?T.text3:T.green }}/>
             </div>
           ))}
         </Card>
@@ -1241,7 +1241,7 @@ export default function Dashboard() {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:16 }}>
         {[
           { label:"Total hoy", val:todayAtt.filter(a=>a.type!=="denied").length, color:"#6366f1" },
-          { label:"Dentro ahora", val:todayAtt.filter(a=>!a.exit_time&&a.type==="member").length, color:T.green },
+          { label:"Dentro ahora", val:todayAtt.filter(a=>!a.exit_at&&a.type==="member").length, color:T.green },
           { label:"Visitantes", val:todayAtt.filter(a=>a.type==="visitor").length, color:T.yellow },
         ].map(s=>(
           <Card key={s.label} style={{ textAlign:"center", padding:14 }}>
@@ -1261,7 +1261,7 @@ export default function Dashboard() {
               background: a.type==="denied"?"#fee2e2":"#f8fafc", borderRadius:10,
               border:`1px solid ${a.type==="denied"?"#fca5a5":a.exit_time?T.border:"#86efac"}` }}>
               <span style={{ width:9, height:9, borderRadius:"50%", flexShrink:0,
-                background:a.type==="denied"?T.red:a.exit_time?T.text3:T.green }}/>
+                background:a.type==="denied"?T.red:a.exit_at?T.text3:T.green }}/>
               <Avatar name={a.member_name} size={32}/>
               <div style={{ flex:1 }}>
                 <span style={{ color:T.text, fontSize:13, fontWeight:600 }}>{a.member_name}</span>
@@ -1274,9 +1274,9 @@ export default function Dashboard() {
                 : <>
                     <PlanTag plan={a.plan}/>
                     <div style={{ color:T.text2, fontSize:11, fontFamily:"'DM Mono',monospace", textAlign:"right", minWidth:80 }}>
-                      <div>▶{fmt12h(a.time)}{a.exit_time&&` ↩${fmt12h(a.exit_time)}`}</div>
+                      <div>▶{fmt12h(a.attended_at)}{a.exit_at&&` ↩${fmt12h(a.exit_at)}`}</div>
                     </div>
-                    {a.exit_time
+                    {a.exit_at
                       ? <span style={{ fontSize:10, color:T.text3, background:"#f1f5f9", padding:"3px 9px", borderRadius:10, flexShrink:0 }}>Salió</span>
                       : <button onClick={async()=>{ await api.patch(`/attendance/${a.id}/exit`); await loadAttendance(); showToast(`↩ Salida: ${a.member_name}`); }}
                           style={{ flexShrink:0, padding:"4px 11px", borderRadius:8, border:`1.5px solid ${T.orange}`,

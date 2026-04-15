@@ -16,9 +16,8 @@ router.get("/", async (req, res) => {
 
   try {
     const result = await pool.query(`
-      SELECT id, member_id, member_name, cedula, plan, type, date,
-             TO_CHAR(attended_at AT TIME ZONE 'America/Costa_Rica', 'HH24:MI') AS time,
-             TO_CHAR(exit_at AT TIME ZONE 'America/Costa_Rica', 'HH24:MI') AS exit_time
+      SELECT id, member_id, member_name, cedula, plan, type, date, notes,
+             attended_at, exit_at
       FROM attendance
       WHERE gym_id = $1 AND date = ${date ? '$2' : CR_TODAY}
       ORDER BY attended_at DESC
