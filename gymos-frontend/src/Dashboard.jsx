@@ -11,6 +11,13 @@ const fmtDate   = (d) => {
   return date.toLocaleDateString("es-CR",{day:"2-digit",month:"short",year:"numeric"});
 };
 const fmtMoney  = (n) => `₡${Number(n||0).toLocaleString("es-CR")}`;
+const fmt12h = (t) => {
+  if(!t) return "";
+  const [h,m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12  = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2,"0")} ${ampm}`;
+};
 const diffDays  = (d) => {
   if(!d) return 0;
   const date = new Date(String(d).slice(0,10)+"T12:00:00");
@@ -427,7 +434,7 @@ function AttendanceModal({ members, todayAttendance, onClose, onMark, onExit }) 
                 ? <span style={{ fontSize:10, color:T.red, background:"#fee2e2", padding:"2px 7px", borderRadius:10, fontWeight:700 }}>Denegado</span>
                 : <>
                     <span style={{ color:T.text3, fontSize:11, fontFamily:"'DM Mono',monospace" }}>
-                      ▶{a.time}{a.exit_time && ` ↩${a.exit_time}`}
+                      ▶{fmt12h(a.time)}{a.exit_time && ` ↩${fmt12h(a.exit_time)}`}
                     </span>
                     {a.exit_time
                       ? <span style={{ fontSize:10, color:T.text3, background:"#f1f5f9", padding:"2px 7px", borderRadius:10 }}>Salió</span>
@@ -1267,7 +1274,7 @@ export default function Dashboard() {
                 : <>
                     <PlanTag plan={a.plan}/>
                     <div style={{ color:T.text2, fontSize:11, fontFamily:"'DM Mono',monospace", textAlign:"right", minWidth:80 }}>
-                      <div>▶{a.time}{a.exit_time&&` ↩${a.exit_time}`}</div>
+                      <div>▶{fmt12h(a.time)}{a.exit_time&&` ↩${fmt12h(a.exit_time)}`}</div>
                     </div>
                     {a.exit_time
                       ? <span style={{ fontSize:10, color:T.text3, background:"#f1f5f9", padding:"3px 9px", borderRadius:10, flexShrink:0 }}>Salió</span>
