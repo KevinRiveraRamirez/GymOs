@@ -1150,11 +1150,16 @@ export default function Dashboard() {
           </div>
           {todayAtt.length===0 && <div style={{ color:T.text3, fontSize:12, textAlign:"center", padding:20 }}>Sin registros aún</div>}
           {[...todayAtt].reverse().slice(0,6).map((a,i)=>(
-            <div key={i} style={{ display:"flex", alignItems:"center", gap:9, padding:"8px 10px", background:"#f8fafc", borderRadius:9, marginBottom:5, border:`1px solid ${T.border}` }}>
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:9, padding:"8px 10px",
+              background:a.type==="denied"?"#fee2e2":"#f8fafc", borderRadius:9, marginBottom:5,
+              border:`1px solid ${a.type==="denied"?"#fca5a5":T.border}` }}>
               <Avatar name={a.member_name} size={28}/>
-              <span style={{ flex:1, color:T.text, fontSize:12, fontWeight:600 }}>{a.member_name}</span>
-              <span style={{ color:T.text3, fontSize:11, fontFamily:"'DM Mono',monospace" }}>{a.time}</span>
-              <span style={{ width:7, height:7, borderRadius:"50%", background:a.exit_at?T.text3:T.green }}/>
+              <div style={{ flex:1 }}>
+                <div style={{ color:a.type==="denied"?T.red:T.text, fontSize:12, fontWeight:600 }}>{a.member_name}</div>
+                {a.type==="denied" && <div style={{ color:T.red, fontSize:10 }}>⛔ Acceso denegado</div>}
+              </div>
+              <span style={{ color:T.text3, fontSize:11, fontFamily:"'DM Mono',monospace" }}>{fmt12h(a.attended_at)}</span>
+              <span style={{ width:7, height:7, borderRadius:"50%", background:a.type==="denied"?T.red:a.exit_at?T.text3:T.green }}/>
             </div>
           ))}
         </Card>
