@@ -998,8 +998,8 @@ export default function Dashboard() {
   },[]);
 
   const loadPayments = useCallback(async()=>{
-    try { const r=await api.get("/payments?period=month&limit=200"); setPayments(r.data||[]); } catch{}
-  },[]);
+    try { const r=await api.get("/payments?period=month&limit=500"); setPayments(r.data||[]); } catch{}
+},[]);
 
   const loadAlerts = useCallback(async()=>{
     try { const r=await api.get("/members/alerts"); setAlerts(r.data||{overdue:[],expiringToday:[],expiringSoon:[]}); } catch{}
