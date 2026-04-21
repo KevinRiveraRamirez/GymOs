@@ -14,8 +14,12 @@ const fmtMoney  = (n) => `₡${Number(n||0).toLocaleString("es-CR")}`;
 const fmt12h = (t) => {
   if(!t) return "";
   try {
-    const d = new Date(t);
-    return d.toLocaleTimeString("es-CR", { hour:"2-digit", minute:"2-digit", hour12:true, timeZone:"America/Costa_Rica" });
+    // Extraer HH:MM directo del string que manda el backend
+    const timeStr = String(t).slice(11, 16); // "HH:MM"
+    const [h, m] = timeStr.split(":").map(Number);
+    const ampm = h >= 12 ? "p. m." : "a. m.";
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2,"0")} ${ampm}`;
   } catch { return t; }
 };
 const diffDays  = (d) => {
