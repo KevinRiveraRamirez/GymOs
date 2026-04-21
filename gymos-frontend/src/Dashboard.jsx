@@ -4,6 +4,7 @@ import api from "./api";
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 const todayStr  = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Costa_Rica" });
+const [overdueOpen, setOverdueOpen] = useState(false);
 const fmtDate   = (d) => {
   if(!d) return "—";
   const date = new Date(String(d).slice(0,10)+"T12:00:00");
@@ -917,19 +918,22 @@ export default function Dashboard() {
               </div>
             </div>
           )}
-          {alerts.overdue?.length>0&&(
-            <div style={{ background:"#ede9fe", border:`1.5px solid #c4b5fd`, borderRadius:14, overflow:"hidden" }}>
-              <div onClick={()=>setAlertModal({title:"Cuotas vencidas",members:alerts.overdue,color:"#7c3aed",icon:"💸",type:"overdue"})}
-                style={{ padding:"11px 16px", display:"flex", gap:8, alignItems:"center", cursor:"pointer" }}>
-                <span style={{ fontSize:16 }}>💸</span>
-                <span style={{ color:"#7c3aed", fontSize:13, fontWeight:700, flex:1 }}>{alerts.overdue.length} miembro{alerts.overdue.length>1?"s":""} con cuota vencida</span>
-                <span style={{ color:"#7c3aed", fontSize:11, fontWeight:700, background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #c4b5fd` }}>Ver y avisar →</span>
-              </div>
-              <div style={{ borderTop:`1px solid #c4b5fd`, padding:"8px 16px", display:"flex", gap:8, flexWrap:"wrap" }}>
-                {alerts.overdue.map(m=><span key={m.id} style={{ fontSize:11, color:"#7c3aed", background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #c4b5fd`, fontWeight:600 }}>{m.name.split(" ")[0]} · venció {fmtDate(m.expires_at)}</span>)}
-              </div>
-            </div>
-          )}
+     {alerts.overdue?.length>0&&(
+  <div style={{ background:"#ede9fe", border:`1.5px solid #c4b5fd`, borderRadius:14, overflow:"hidden" }}>
+    <div onClick={()=>setAlertModal({title:"Cuotas vencidas",members:alerts.overdue,color:"#7c3aed",icon:"💸",type:"overdue"})}
+      style={{ padding:"11px 16px", display:"flex", gap:8, alignItems:"center", cursor:"pointer" }}>
+      <span style={{ fontSize:16 }}>💸</span>
+      <span style={{ color:"#7c3aed", fontSize:13, fontWeight:700, flex:1 }}>{alerts.overdue.length} miembro{alerts.overdue.length>1?"s":""} con cuota vencida</span>
+      <span onClick={e=>{ e.stopPropagation(); setOverdueOpen(v=>!v); }} style={{ color:"#7c3aed", fontSize:11, fontWeight:700, background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #c4b5fd`, marginRight:6, cursor:"pointer" }}>{overdueOpen?"▲ Ocultar":"▼ Ver lista"}</span>
+      <span style={{ color:"#7c3aed", fontSize:11, fontWeight:700, background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #c4b5fd` }}>Ver y avisar →</span>
+    </div>
+    {overdueOpen && (
+      <div style={{ borderTop:`1px solid #c4b5fd`, padding:"8px 16px", display:"flex", gap:8, flexWrap:"wrap" }}>
+        {alerts.overdue.map(m=><span key={m.id} style={{ fontSize:11, color:"#7c3aed", background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #c4b5fd`, fontWeight:600 }}>{m.name.split(" ")[0]} · venció {fmtDate(m.expires_at)}</span>)}
+      </div>
+    )}
+  </div>
+)}
         </div>
       )}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
