@@ -26,7 +26,7 @@ const diffDays  = (d) => {
 };
 const initials  = (name="?") => name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
 
-// ─── THEME ────────────────────────────────────────────────────────────────────
+// ─── THEME (CLARO) ────────────────────────────────────────────────────────────
 const T = {
   bg:"#f0f2f7", surface:"#ffffff", border:"#e2e8f0", border2:"#cbd5e1",
   text:"#0f172a", text2:"#475569", text3:"#94a3b8",
@@ -177,7 +177,13 @@ function MemberModal({ member, onClose, onSave }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const set = (k,v)=>setForm(f=>({...f,[k]:v}));
+
+  const handlePlanChange = (p) => {
+    set("plan", p);
+  };
+
   const expiryPreview = form.joinedAt ? calcExpiry(form.joinedAt, form.plan) : "";
+
   const handleSave = async()=>{
     setLoading(true); setError("");
     try { await onSave({...form}); onClose(); }
@@ -205,7 +211,7 @@ function MemberModal({ member, onClose, onSave }) {
       <Lbl>PLAN</Lbl>
       <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
         {["Día","Semanal","Quincenal","Mensual","Bimensual"].map(p=>(
-          <button key={p} onClick={()=>set("plan",p)} style={{
+          <button key={p} onClick={()=>handlePlanChange(p)} style={{
             flex:1, minWidth:80, padding:"9px 6px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
             border:`2px solid ${form.plan===p?(PLAN_META[p]?.color||T.accent):T.border2}`,
             background:form.plan===p?(PLAN_META[p]?.bg||T.accentBg):T.surface,
@@ -227,7 +233,7 @@ function MemberModal({ member, onClose, onSave }) {
   );
 }
 
-// ─── PAYMENT MODAL ────────────────────────────────────────────────────────────
+// ─── PAYMENT MODAL — monto siempre editable ───────────────────────────────────
 function PaymentModal({ members, onClose, onSave }) {
   const [visitorMode, setVisitorMode] = useState(false);
   const [selMember, setSelMember] = useState(null);
@@ -337,7 +343,7 @@ function PaymentModal({ members, onClose, onSave }) {
   );
 }
 
-// ─── ATTENDANCE MODAL ─────────────────────────────────────────────────────────
+// ─── ATTENDANCE MODAL — con salida ────────────────────────────────────────────
 function AttendanceModal({ members, todayAttendance, onClose, onMark, onExit }) {
   const [visitorMode, setVisitorMode] = useState(false);
   const [selMember, setSelMember] = useState(null);
@@ -456,26 +462,69 @@ function AlertListModal({ title, members, color, icon, type, onClose, onSelectMe
     const f = fmtDate(m.expires_at);
     const dias = diffDays(m.expires_at);
     const planMsg = {
-      Mensual:{renovar:"para no perder continuidad"}, Bimensual:{renovar:"para no perder continuidad"},
-      Quincenal:{renovar:"a tiempo para seguir entrenando"}, Semanal:{renovar:"a tiempo para seguir entrenando esta semana"},
-      Día:{renovar:"cuando quieras"},
+      Mensual:   { renovar:"para no perder continuidad" },
+      Bimensual: { renovar:"para no perder continuidad" },
+      Quincenal: { renovar:"a tiempo para seguir entrenando" },
+      Semanal:   { renovar:"a tiempo para seguir entrenando esta semana" },
+      Día:       { renovar:"cuando quieras" },
     };
-    const pm = planMsg[m.plan]||{renovar:"a tiempo"};
-    if(type==="overdue") return encodeURIComponent(`Hola ${n}!\n\nTe recordamos que tu membresia *${m.plan}* vencio el *${f}*.\n\nPara seguir disfrutando del gimnasio, podes renovarla ${pm.renovar}.\n\n_GymOS_`);
-    if(type==="today")   return encodeURIComponent(`Hola ${n}!\n\nTu membresia *${m.plan}* vence *HOY*.\n\nAcercate al gimnasio para renovarla y no perder acceso.\n\n_GymOS_`);
-    return encodeURIComponent(`Hola ${n}!\n\nTe avisamos que tu membresia *${m.plan}* vence el *${f}* (en *${dias} dia${dias!==1?"s":""}*).\n\nRenovala ${pm.renovar}.\n\n_GymOS_`);
+    const pm = planMsg[m.plan] || { renovar:"a tiempo" };
+
+    if(type==="overdue"){
+      return encodeURIComponent(`Hola ${n}!
+
+Te recordamos que tu membresia *${m.plan}* vencio el *${f}*.
+
+Para seguir disfrutando del gimnasio, podes renovarla ${pm.renovar}.
+
+_GymOS_`);
+    }
+    if(type==="today"){
+      return encodeURIComponent(`Hola ${n}!
+
+Tu membresia *${m.plan}* vence *HOY*.
+
+Acercate al gimnasio para renovarla y no perder acceso.
+
+_GymOS_`);
+    }
+    // soon
+    return encodeURIComponent(`Hola ${n}!
+
+Te avisamos que tu membresia *${m.plan}* vence el *${f}* (en *${dias} dia${dias!==1?"s":""}*).
+
+Renovala ${pm.renovar}.
+
+_GymOS_`);
+    return encodeURIComponent(`Hola ${n} 👋
+
+Tu membresía vence el *${f}*. Renovála pronto. 💪
+
+_GymOS_`);
   };
 
-  const sendOne = (m)=>{ window.open(`https://wa.me/506${cleanPhone(m.phone)}?text=${waMsg(m)}`,"_blank"); setNotified(prev=>({...prev,[m.id]:true})); };
-  const pendientes = members.filter(m=>!notified[m.id]);
-  const avisadosCount = Object.keys(notified).length;
-  const startSeq = ()=>{ const fi=members.findIndex(m=>!notified[m.id]); setSeqIdx(fi>=0?fi:0); setSeqMode(true); };
-  const sendSeq = ()=>{
-    const m=members[seqIdx];
+  const sendOne = (m)=>{
     window.open(`https://wa.me/506${cleanPhone(m.phone)}?text=${waMsg(m)}`,"_blank");
     setNotified(prev=>({...prev,[m.id]:true}));
-    const next=members.findIndex((mb,i)=>i>seqIdx&&!notified[mb.id]&&mb.id!==m.id);
-    if(next>=0){setSeqIdx(next);}else{setSeqMode(false);}
+  };
+
+  const pendientes = members.filter(m=>!notified[m.id]);
+  const avisadosCount = Object.keys(notified).length;
+
+  const startSeq = ()=>{
+    const firstIdx = members.findIndex(m=>!notified[m.id]);
+    setSeqIdx(firstIdx>=0?firstIdx:0);
+    setSeqMode(true);
+  };
+
+  const sendSeq = ()=>{
+    const m = members[seqIdx];
+    window.open(`https://wa.me/506${cleanPhone(m.phone)}?text=${waMsg(m)}`,"_blank");
+    setNotified(prev=>({...prev,[m.id]:true}));
+    // Buscar siguiente pendiente
+    const next = members.findIndex((mb,i)=>i>seqIdx&&!notified[mb.id]&&mb.id!==m.id);
+    if(next>=0){ setSeqIdx(next); }
+    else { setSeqMode(false); }
   };
 
   return (
@@ -489,57 +538,92 @@ function AlertListModal({ title, members, color, icon, type, onClose, onSelectMe
         </div>
         <span style={{ color:T.text3, fontSize:11 }}>Tocá 📱 para WhatsApp</span>
       </div>
+
       {seqMode ? (
+        // ── MODO SECUENCIAL ──
         <div style={{ background:"#f0fdf4", border:`2px solid #86efac`, borderRadius:14, padding:18, marginBottom:14 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-            <span style={{ color:T.green, fontWeight:800, fontSize:14 }}>📱 Enviando {seqIdx+1} de {members.length}</span>
-            <button onClick={()=>setSeqMode(false)} style={{ background:"none", border:"none", color:T.text3, fontSize:20, cursor:"pointer" }}>×</button>
+            <span style={{ color:T.green, fontWeight:800, fontSize:14 }}>
+              📱 Enviando {seqIdx+1} de {members.length}
+            </span>
+            <button onClick={()=>setSeqMode(false)} style={{ background:"none", border:"none",
+              color:T.text3, fontSize:20, cursor:"pointer" }}>×</button>
           </div>
           {members[seqIdx] && (
-            <div style={{ background:T.surface, borderRadius:10, padding:14, marginBottom:12, border:`1px solid ${T.border}` }}>
+            <div style={{ background:T.surface, borderRadius:10, padding:14, marginBottom:12,
+              border:`1px solid ${T.border}` }}>
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
                 <Avatar name={members[seqIdx].name} size={38}/>
-                <div><div style={{ color:T.text, fontWeight:700 }}>{members[seqIdx].name}</div><div style={{ color:T.text3, fontSize:11 }}>📞 {members[seqIdx].phone}</div></div>
+                <div>
+                  <div style={{ color:T.text, fontWeight:700 }}>{members[seqIdx].name}</div>
+                  <div style={{ color:T.text3, fontSize:11 }}>📞 {members[seqIdx].phone}</div>
+                </div>
                 <PlanTag plan={members[seqIdx].plan}/>
               </div>
             </div>
           )}
           <div style={{ display:"flex", gap:8 }}>
-            <button onClick={()=>setSeqMode(false)} style={{ flex:1, padding:"10px", borderRadius:10, border:`1px solid ${T.border2}`, background:T.surface, color:T.text2, fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer" }}>Pausar</button>
-            <button onClick={sendSeq} style={{ flex:2, padding:"10px", borderRadius:10, border:"none", background:"#15803d", color:"#fff", fontFamily:"inherit", fontSize:13, fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>📱 Enviar y siguiente →</button>
+            <button onClick={()=>setSeqMode(false)} style={{ flex:1, padding:"10px", borderRadius:10,
+              border:`1px solid ${T.border2}`, background:T.surface, color:T.text2,
+              fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+              Pausar
+            </button>
+            <button onClick={sendSeq} style={{ flex:2, padding:"10px", borderRadius:10, border:"none",
+              background:"#15803d", color:"#fff", fontFamily:"inherit", fontSize:13,
+              fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              📱 Enviar y siguiente →
+            </button>
           </div>
           <div style={{ marginTop:10 }}>
             <div style={{ background:"#dcfce7", borderRadius:6, height:6 }}>
-              <div style={{ background:T.green, borderRadius:6, height:6, width:`${(avisadosCount/members.length)*100}%`, transition:"width 0.3s" }}/>
+              <div style={{ background:T.green, borderRadius:6, height:6,
+                width:`${(avisadosCount/members.length)*100}%`, transition:"width 0.3s" }}/>
             </div>
-            <div style={{ color:T.text3, fontSize:11, marginTop:4, textAlign:"center" }}>{avisadosCount} de {members.length} avisados</div>
+            <div style={{ color:T.text3, fontSize:11, marginTop:4, textAlign:"center" }}>
+              {avisadosCount} de {members.length} avisados
+            </div>
           </div>
         </div>
       ) : pendientes.length>0 ? (
-        <button onClick={startSeq} style={{ width:"100%", padding:"10px", borderRadius:10, marginBottom:14, border:"1.5px solid #86efac", background:"#dcfce7", color:"#15803d", fontFamily:"inherit", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+        <button onClick={startSeq} style={{ width:"100%", padding:"10px", borderRadius:10, marginBottom:14,
+          border:"1.5px solid #86efac", background:"#dcfce7", color:"#15803d",
+          fontFamily:"inherit", fontSize:13, fontWeight:700, cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
           📱 Avisar a todos por WhatsApp ({pendientes.length} pendiente{pendientes.length!==1?"s":""})
         </button>
       ) : (
-        <div style={{ background:T.greenBg, border:`1px solid #86efac`, borderRadius:10, padding:"10px 14px", marginBottom:14, textAlign:"center", color:T.green, fontSize:13, fontWeight:700 }}>✅ Ya se avisó a todos</div>
+        <div style={{ background:T.greenBg, border:`1px solid #86efac`, borderRadius:10,
+          padding:"10px 14px", marginBottom:14, textAlign:"center", color:T.green, fontSize:13, fontWeight:700 }}>
+          ✅ Ya se avisó a todos
+        </div>
       )}
+
       <div style={{ display:"flex", flexDirection:"column", gap:7, maxHeight:380, overflowY:"auto" }}>
         {members.map(m=>{
-          const avisado=!!notified[m.id];
+          const avisado = !!notified[m.id];
           return (
-            <div key={m.id} style={{ background:avisado?"#f0fdf4":"#f8fafc", border:`1.5px solid ${avisado?"#86efac":T.border}`, borderRadius:12, padding:"11px 14px", display:"flex", alignItems:"center", gap:12 }}>
+            <div key={m.id} style={{ background:avisado?"#f0fdf4":"#f8fafc",
+              border:`1.5px solid ${avisado?"#86efac":T.border}`, borderRadius:12,
+              padding:"11px 14px", display:"flex", alignItems:"center", gap:12 }}>
               <Avatar name={m.name} size={40}/>
               <div style={{ flex:1, cursor:"pointer" }} onClick={()=>{ onSelectMember(m); onClose(); }}>
                 <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                   <span style={{ color:T.text, fontWeight:700, fontSize:14 }}>{m.name}</span>
-                  {avisado && <span style={{ fontSize:10, color:T.green, background:T.greenBg, padding:"2px 7px", borderRadius:10, fontWeight:700 }}>✓ Avisado</span>}
+                  {avisado && <span style={{ fontSize:10, color:T.green, background:T.greenBg,
+                    padding:"2px 7px", borderRadius:10, fontWeight:700 }}>✓ Avisado</span>}
                 </div>
                 <div style={{ color, fontSize:11, marginTop:2 }}>
-                  {type==="overdue"?`Venció: ${fmtDate(m.expires_at)}`:type==="today"?"Vence HOY":`Vence en ${diffDays(m.expires_at)} días — ${fmtDate(m.expires_at)}`}
+                  {type==="overdue"?`Venció: ${fmtDate(m.expires_at)}`:
+                   type==="today"?"Vence HOY":
+                   `Vence en ${diffDays(m.expires_at)} días — ${fmtDate(m.expires_at)}`}
                 </div>
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:5, alignItems:"flex-end" }}>
                 <PlanTag plan={m.plan}/>
-                <button onClick={()=>sendOne(m)} style={{ display:"flex", alignItems:"center", gap:5, background:"#dcfce7", border:"1px solid #86efac", color:"#15803d", padding:"4px 10px", borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:avisado?0.7:1 }}>
+                <button onClick={()=>sendOne(m)} style={{ display:"flex", alignItems:"center", gap:5,
+                  background:"#dcfce7", border:"1px solid #86efac", color:"#15803d",
+                  padding:"4px 10px", borderRadius:8, fontSize:11, fontWeight:700,
+                  cursor:"pointer", fontFamily:"inherit", opacity:avisado?0.7:1 }}>
                   {avisado?"📱 Reenviar":"📱 Avisar"}
                 </button>
               </div>
@@ -559,13 +643,20 @@ function EditPaymentModal({ payment, onClose, onSave }) {
   const [discount, setDiscount] = useState(payment.discount||0);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
-  const raw=parseInt(amount)||0, disc=Math.round(raw*discount/100), final=raw-disc;
+
+  const raw   = parseInt(amount)||0;
+  const disc  = Math.round(raw*discount/100);
+  const final = raw-disc;
+
   const handleSave = async()=>{
     setLoading(true); setError("");
-    try { await onSave({ method, amount:final, plan, discount }); onClose(); }
-    catch(e){ setError(e.response?.data?.error||"Error al guardar"); }
+    try {
+      await onSave({ method, amount:final, plan, discount });
+      onClose();
+    } catch(e){ setError(e.response?.data?.error||"Error al guardar"); }
     finally{ setLoading(false); }
   };
+
   return (
     <Modal title="Editar Pago" onClose={onClose}>
       <ErrBox msg={error}/>
@@ -576,32 +667,41 @@ function EditPaymentModal({ payment, onClose, onSave }) {
       <Lbl>PLAN</Lbl>
       <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
         {["Día","Semanal","Quincenal","Mensual","Bimensual"].map(p=>(
-          <button key={p} onClick={()=>setPlan(p)} style={{ flex:1, minWidth:70, padding:"8px 4px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
+          <button key={p} onClick={()=>setPlan(p)} style={{
+            flex:1, minWidth:70, padding:"8px 4px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
             border:`2px solid ${plan===p?(PLAN_META[p]?.color||T.accent):T.border2}`,
             background:plan===p?(PLAN_META[p]?.bg||T.accentBg):T.surface,
-            color:plan===p?(PLAN_META[p]?.color||T.accent):T.text2, fontSize:11, fontWeight:700 }}>{p}</button>
+            color:plan===p?(PLAN_META[p]?.color||T.accent):T.text2, fontSize:11, fontWeight:700
+          }}>{p}</button>
         ))}
       </div>
       <Lbl>MÉTODO DE PAGO</Lbl>
       <div style={{ display:"flex", gap:8, marginBottom:14 }}>
         {["SINPE","Efectivo"].map(m=>(
-          <button key={m} onClick={()=>setMethod(m)} style={{ flex:1, padding:"11px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
-            border:`2px solid ${method===m?T.accent:T.border2}`, background:method===m?T.accentBg:T.surface,
-            color:method===m?T.accent:T.text2, fontSize:13, fontWeight:700 }}>{m==="SINPE"?"📱 SINPE":"💵 Efectivo"}</button>
+          <button key={m} onClick={()=>setMethod(m)} style={{
+            flex:1, padding:"11px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
+            border:`2px solid ${method===m?T.accent:T.border2}`,
+            background:method===m?T.accentBg:T.surface,
+            color:method===m?T.accent:T.text2, fontSize:13, fontWeight:700
+          }}>{m==="SINPE"?"📱 SINPE":"💵 Efectivo"}</button>
         ))}
       </div>
       <Lbl>MONTO (₡)</Lbl>
       <div style={{ position:"relative", marginBottom:14 }}>
         <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", color:T.text3, fontWeight:700 }}>₡</span>
         <input type="number" min="0" value={amount} onChange={e=>setAmount(e.target.value)}
-          style={{ ...iStyle, marginBottom:0, paddingLeft:28, fontSize:16, fontWeight:700, border:`2px solid ${amount?T.accent:T.border2}`, fontFamily:"'DM Mono',monospace" }}/>
+          style={{ ...iStyle, marginBottom:0, paddingLeft:28, fontSize:16, fontWeight:700,
+            border:`2px solid ${amount?T.accent:T.border2}`, fontFamily:"'DM Mono',monospace" }}/>
       </div>
       <Lbl>DESCUENTO (%)</Lbl>
       <div style={{ display:"flex", gap:6, marginBottom:16 }}>
         {[0,5,10,15,20].map(d=>(
-          <button key={d} onClick={()=>setDiscount(d)} style={{ flex:1, padding:"8px 4px", borderRadius:9, cursor:"pointer", fontFamily:"inherit",
-            border:`2px solid ${discount===d?T.blue:T.border2}`, background:discount===d?T.blueBg:T.surface,
-            color:discount===d?T.blue:T.text3, fontSize:11, fontWeight:700 }}>{d}%</button>
+          <button key={d} onClick={()=>setDiscount(d)} style={{
+            flex:1, padding:"8px 4px", borderRadius:9, cursor:"pointer", fontFamily:"inherit",
+            border:`2px solid ${discount===d?T.blue:T.border2}`,
+            background:discount===d?T.blueBg:T.surface,
+            color:discount===d?T.blue:T.text3, fontSize:11, fontWeight:700
+          }}>{d}%</button>
         ))}
       </div>
       {raw>0 && disc>0 && (
@@ -618,7 +718,9 @@ function EditPaymentModal({ payment, onClose, onSave }) {
       )}
       <div style={{ display:"flex", gap:8, marginTop:4 }}>
         <Btn variant="ghost" onClick={onClose} style={{ flex:1 }}>Cancelar</Btn>
-        <Btn onClick={handleSave} disabled={!raw||loading} style={{ flex:2 }}>{loading?"Guardando...":"Guardar Cambios"}</Btn>
+        <Btn onClick={handleSave} disabled={!raw||loading} style={{ flex:2 }}>
+          {loading?"Guardando...":"Guardar Cambios"}
+        </Btn>
       </div>
     </Modal>
   );
@@ -633,59 +735,134 @@ function CashReportModal({ onClose }) {
   const [report, setReport]     = useState(null);
   const [loading, setLoading]   = useState(true);
   const [showList, setShowList] = useState(false);
+
   const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   const YEARS  = [now.getFullYear()-1, now.getFullYear()];
+
   useEffect(()=>{
     setLoading(true);
-    let url=`/payments/report?period=${period}`;
-    if(period==="month") url+=`&month=${selMonth}&year=${selYear}`;
+    let url = `/payments/report?period=${period}`;
+    if(period==="month") url += `&month=${selMonth}&year=${selYear}`;
     api.get(url).then(r=>setReport(r.data)).finally(()=>setLoading(false));
-  },[period,selMonth,selYear]);
-  const periodLabel=period==="day"?"Día":period==="week"?"Semana":`${MONTHS[selMonth-1]} ${selYear}`;
-  const periodTotal=period==="day"?"HOY":period==="week"?"ESTA SEMANA":`${MONTHS[selMonth-1].toUpperCase()} ${selYear}`;
-  const fmtMoneyPDF=(n)=>`c/${Number(n||0).toLocaleString("es-CR")}`;
-  const downloadPDF=async()=>{
+  },[period, selMonth, selYear]);
+
+  const periodLabel = period==="day"?"Día":period==="week"?"Semana":`${MONTHS[selMonth-1]} ${selYear}`;
+  const periodTotal = period==="day"?"HOY":period==="week"?"ESTA SEMANA":`${MONTHS[selMonth-1].toUpperCase()} ${selYear}`;
+  const nowStr = new Date().toLocaleDateString("es-CR",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
+
+  const fmtMoneyPDF = (n) => `c/${Number(n||0).toLocaleString("es-CR")}`;
+
+  const downloadPDF = async () => {
     if(!report) return;
-    if(!window.jspdf){
-      await new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+    // Cargar jsPDF dinámicamente
+    if(!window.jspdf) {
+      await new Promise((res,rej)=>{
+        const s = document.createElement("script");
+        s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
     }
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF({unit:"mm",format:"a4"});
-    const n=new Date();
-    const dateStr=n.toLocaleDateString("es-CR",{day:"2-digit",month:"2-digit",year:"numeric"});
-    const timeStr=n.toLocaleTimeString("es-CR",{hour:"2-digit",minute:"2-digit"});
-    const fileDate=n.toISOString().slice(0,10);
-    const sinpe=report.byMethod.find(m=>m.method==="SINPE");
-    const efect=report.byMethod.find(m=>m.method==="Efectivo");
-    const W=210,pad=20; let y=0;
-    doc.setFillColor(5,150,105); doc.rect(0,0,W,38,"F");
-    doc.setTextColor(255,255,255); doc.setFontSize(20); doc.setFont("helvetica","bold"); doc.text("GymOS",pad,16);
-    doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(209,250,229);
-    doc.text(`Cierre de Caja — ${periodLabel}`,pad,24); doc.text(`Generado: ${dateStr} ${timeStr}`,pad,31); y=50;
-    doc.setFillColor(240,253,244); doc.setDrawColor(134,239,172); doc.roundedRect(pad,y,W-pad*2,32,4,4,"FD");
-    doc.setTextColor(6,95,70); doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.text(`TOTAL ${periodTotal}`,W/2,y+10,{align:"center"});
-    doc.setFontSize(22); doc.setFont("helvetica","bold"); doc.setTextColor(5,150,105); doc.text(fmtMoneyPDF(report.summary.total),W/2,y+22,{align:"center"});
-    doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(100,116,139); doc.text(`${report.summary.transactions} transacciones · ${report.summary.visitors} visitantes`,W/2,y+30,{align:"center"});
-    y+=42;
-    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(148,163,184); doc.text("DESGLOSE POR MÉTODO",pad,y); y+=5;
-    const half=(W-pad*2-8)/2;
-    doc.setFillColor(238,242,255); doc.setDrawColor(199,210,254); doc.roundedRect(pad,y,half,22,3,3,"FD");
-    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(99,102,241); doc.text("SINPE",pad+5,y+8);
-    doc.setFontSize(13); doc.setFont("helvetica","bold"); doc.text(fmtMoneyPDF(sinpe?.total||0),pad+5,y+17);
-    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(148,163,184); doc.text(`${sinpe?.count||0} transacciones`,pad+half-5,y+17,{align:"right"});
-    const x2=pad+half+8;
-    doc.setFillColor(255,251,235); doc.setDrawColor(253,230,138); doc.roundedRect(x2,y,half,22,3,3,"FD");
-    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(245,158,11); doc.text("Efectivo",x2+5,y+8);
-    doc.setFontSize(13); doc.setFont("helvetica","bold"); doc.text(fmtMoneyPDF(efect?.total||0),x2+5,y+17);
-    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(148,163,184); doc.text(`${efect?.count||0} transacciones`,x2+half-5,y+17,{align:"right"});
-    y+=30;
-    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(148,163,184); doc.text("DESGLOSE POR PLAN",pad,y); y+=5;
-    const planColors={Mensual:{bg:[237,233,254],bd:[196,181,253],txt:[124,58,237]},Semanal:{bg:[219,234,254],bd:[147,197,253],txt:[29,78,216]},"Día":{bg:[254,249,195],bd:[253,224,71],txt:[161,98,7]},Visitante:{bg:[240,253,244],bd:[134,239,172],txt:[21,128,61]}};
-    report.byPlan.forEach(p=>{ const col=planColors[p.plan]||{bg:[241,245,249],bd:[203,213,225],txt:[71,85,105]}; doc.setFillColor(...col.bg); doc.setDrawColor(...col.bd); doc.roundedRect(pad,y,W-pad*2,12,2,2,"FD"); doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(...col.txt); doc.text(p.plan,pad+5,y+8); doc.setTextColor(100,116,139); doc.setFont("helvetica","normal"); doc.text(`${p.count} pago${p.count!==1?"s":""}`,W/2,y+8,{align:"center"}); doc.setFont("helvetica","bold"); doc.setTextColor(30,41,59); doc.text(fmtMoneyPDF(p.total),W-pad-5,y+8,{align:"right"}); y+=15; });
-    y=Math.max(y+10,260); doc.setDrawColor(226,232,240); doc.line(pad,y,W-pad,y); y+=6;
-    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(148,163,184); doc.text("GymOS · Sistema de Administración de Gimnasio · Reporte generado automáticamente",W/2,y,{align:"center"});
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:"mm", format:"a4" });
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("es-CR",{day:"2-digit",month:"2-digit",year:"numeric"});
+    const timeStr = now.toLocaleTimeString("es-CR",{hour:"2-digit",minute:"2-digit"});
+    const fileDate = now.toISOString().slice(0,10); // YYYY-MM-DD para el nombre del archivo
+    const sinpe = report.byMethod.find(m=>m.method==="SINPE");
+    const efect = report.byMethod.find(m=>m.method==="Efectivo");
+
+    const W = 210, pad = 20;
+    let y = 0;
+
+    // ── Cabecera verde ──
+    doc.setFillColor(5,150,105);
+    doc.rect(0,0,W,38,"F");
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(20); doc.setFont("helvetica","bold");
+    doc.text("GymOS", pad, 16);
+    doc.setFontSize(10); doc.setFont("helvetica","normal");
+    doc.setTextColor(209,250,229);
+    doc.text(`Cierre de Caja — ${periodLabel}`, pad, 24);
+    doc.text(`Generado: ${dateStr} ${timeStr}`, pad, 31);
+    y = 50;
+
+    // ── Caja total ──
+    doc.setFillColor(240,253,244);
+    doc.setDrawColor(134,239,172);
+    doc.roundedRect(pad, y, W-pad*2, 32, 4, 4, "FD");
+    doc.setTextColor(6,95,70);
+    doc.setFontSize(9); doc.setFont("helvetica","bold");
+    doc.text(`TOTAL ${periodTotal}`, W/2, y+10, {align:"center"});
+    doc.setFontSize(22); doc.setFont("helvetica","bold");
+    doc.setTextColor(5,150,105);
+    doc.text(fmtMoneyPDF(report.summary.total), W/2, y+22, {align:"center"});
+    doc.setFontSize(9); doc.setFont("helvetica","normal");
+    doc.setTextColor(100,116,139);
+    doc.text(`${report.summary.transactions} transacciones · ${report.summary.visitors} visitantes`, W/2, y+30, {align:"center"});
+    y += 42;
+
+    // ── Sección: Por Método ──
+    doc.setFontSize(8); doc.setFont("helvetica","bold");
+    doc.setTextColor(148,163,184);
+    doc.text("DESGLOSE POR MÉTODO", pad, y); y += 5;
+
+    const half = (W-pad*2-8)/2;
+    // SINPE
+    doc.setFillColor(238,242,255); doc.setDrawColor(199,210,254);
+    doc.roundedRect(pad, y, half, 22, 3, 3, "FD");
+    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(99,102,241);
+    doc.text("SINPE", pad+5, y+8);
+    doc.setFontSize(13); doc.setFont("helvetica","bold");
+    doc.text(fmtMoneyPDF(sinpe?.total||0), pad+5, y+17);
+    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(148,163,184);
+    doc.text(`${sinpe?.count||0} transacciones`, pad+half-5, y+17, {align:"right"});
+    // Efectivo
+    const x2 = pad+half+8;
+    doc.setFillColor(255,251,235); doc.setDrawColor(253,230,138);
+    doc.roundedRect(x2, y, half, 22, 3, 3, "FD");
+    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(245,158,11);
+    doc.text("Efectivo", x2+5, y+8);
+    doc.setFontSize(13); doc.setFont("helvetica","bold");
+    doc.text(fmtMoneyPDF(efect?.total||0), x2+5, y+17);
+    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(148,163,184);
+    doc.text(`${efect?.count||0} transacciones`, x2+half-5, y+17, {align:"right"});
+    y += 30;
+
+    // ── Sección: Por Plan ──
+    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(148,163,184);
+    doc.text("DESGLOSE POR PLAN", pad, y); y += 5;
+
+    const planColors = {
+      Mensual:{bg:[237,233,254],bd:[196,181,253],txt:[124,58,237]},
+      Semanal:{bg:[219,234,254],bd:[147,197,253],txt:[29,78,216]},
+      "Día":  {bg:[254,249,195],bd:[253,224,71], txt:[161,98,7]},
+      Visitante:{bg:[240,253,244],bd:[134,239,172],txt:[21,128,61]}
+    };
+    report.byPlan.forEach(p=>{
+      const col = planColors[p.plan]||{bg:[241,245,249],bd:[203,213,225],txt:[71,85,105]};
+      doc.setFillColor(...col.bg); doc.setDrawColor(...col.bd);
+      doc.roundedRect(pad, y, W-pad*2, 12, 2, 2, "FD");
+      doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(...col.txt);
+      doc.text(p.plan, pad+5, y+8);
+      doc.setTextColor(100,116,139); doc.setFont("helvetica","normal");
+      doc.text(`${p.count} pago${p.count!==1?"s":""}`, W/2, y+8, {align:"center"});
+      doc.setFont("helvetica","bold"); doc.setTextColor(30,41,59);
+      doc.text(fmtMoneyPDF(p.total), W-pad-5, y+8, {align:"right"});
+      y += 15;
+    });
+
+    // ── Footer ──
+    y = Math.max(y+10, 260);
+    doc.setDrawColor(226,232,240);
+    doc.line(pad, y, W-pad, y); y += 6;
+    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(148,163,184);
+    doc.text("GymOS · Sistema de Administración de Gimnasio · Reporte generado automáticamente", W/2, y, {align:"center"});
+
+    // ── Descargar ──
     doc.save(`cierre-caja-${periodLabel.toLowerCase()}-${fileDate}.pdf`);
   };
+
   return (
     <Modal title="Cierre de Caja" onClose={onClose} width={520}>
       <div style={{ display:"flex", gap:8, marginBottom:14 }}>
@@ -697,16 +874,20 @@ function CashReportModal({ onClose }) {
       </div>
       {period==="month" && (
         <div style={{ display:"flex", gap:8, marginBottom:14 }}>
-          <select value={selMonth} onChange={e=>setSelMonth(parseInt(e.target.value))} style={{ flex:2, background:T.surface, border:`1.5px solid ${T.border2}`, borderRadius:9, padding:"8px 12px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}>
+          <select value={selMonth} onChange={e=>setSelMonth(parseInt(e.target.value))}
+            style={{ flex:2, background:T.surface, border:`1.5px solid ${T.border2}`, borderRadius:9,
+              padding:"8px 12px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}>
             {MONTHS.map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
           </select>
-          <select value={selYear} onChange={e=>setSelYear(parseInt(e.target.value))} style={{ flex:1, background:T.surface, border:`1.5px solid ${T.border2}`, borderRadius:9, padding:"8px 12px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}>
+          <select value={selYear} onChange={e=>setSelYear(parseInt(e.target.value))}
+            style={{ flex:1, background:T.surface, border:`1.5px solid ${T.border2}`, borderRadius:9,
+              padding:"8px 12px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}>
             {YEARS.map(y=><option key={y} value={y}>{y}</option>)}
           </select>
         </div>
       )}
-      {loading&&<div style={{ textAlign:"center", color:T.text3, padding:30 }}>Cargando...</div>}
-      {report&&!loading&&(
+      {loading && <div style={{ textAlign:"center", color:T.text3, padding:30 }}>Cargando...</div>}
+      {report && !loading && (
         <>
           <div style={{ background:"linear-gradient(135deg,#059669,#34d399)", borderRadius:16, padding:22, textAlign:"center", marginBottom:16 }}>
             <div style={{ color:"#d1fae5", fontSize:12, fontWeight:700, letterSpacing:"1px", marginBottom:6 }}>TOTAL {periodTotal}</div>
@@ -730,18 +911,30 @@ function CashReportModal({ onClose }) {
               </div>
             ))}
           </div>
-          <button onClick={downloadPDF} style={{ width:"100%", padding:"11px", borderRadius:10, border:"none", cursor:"pointer", background:"#059669", color:"#fff", fontFamily:"inherit", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>📄 Descargar PDF — {periodLabel}</button>
-          {report.payments?.length>0&&(
+          <button onClick={downloadPDF} style={{
+            width:"100%", padding:"11px", borderRadius:10, border:"none", cursor:"pointer",
+            background:"#059669", color:"#fff", fontFamily:"inherit",
+            fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8
+          }}>
+            📄 Descargar PDF — {periodLabel}
+          </button>
+          {report.payments?.length>0 && (
             <div style={{ marginTop:16 }}>
-              <button onClick={()=>setShowList(v=>!v)} style={{ width:"100%", padding:"9px", borderRadius:10, border:`1.5px solid ${T.border2}`, background:T.surface, color:T.text2, fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer", marginBottom:10 }}>
+              <button onClick={()=>setShowList(v=>!v)} style={{ width:"100%", padding:"9px", borderRadius:10,
+                border:`1.5px solid ${T.border2}`, background:T.surface, color:T.text2,
+                fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer", marginBottom:10 }}>
                 {showList?"▲ Ocultar":"▼ Ver"} lista de pagos ({report.payments.length})
               </button>
-              {showList&&(
+              {showList && (
                 <div style={{ maxHeight:280, overflowY:"auto", display:"flex", flexDirection:"column", gap:5 }}>
                   {report.payments.map((p,i)=>(
-                    <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", background:"#f8fafc", borderRadius:9, border:`1px solid ${T.border}` }}>
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
+                      background:"#f8fafc", borderRadius:9, border:`1px solid ${T.border}` }}>
                       <span>{p.method==="SINPE"?"📱":"💵"}</span>
-                      <div style={{ flex:1 }}><div style={{ color:T.text, fontSize:12, fontWeight:600 }}>{p.member_name}</div><div style={{ color:T.text3, fontSize:11 }}>{fmtDate(p.paid_at)} · {p.method}</div></div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ color:T.text, fontSize:12, fontWeight:600 }}>{p.member_name}</div>
+                        <div style={{ color:T.text3, fontSize:11 }}>{fmtDate(p.paid_at)} · {p.method}</div>
+                      </div>
                       <PlanTag plan={p.plan}/>
                       {p.discount>0&&<span style={{ color:T.red, fontSize:10 }}>-{p.discount}%</span>}
                       <span style={{ color:T.green, fontWeight:800, fontSize:13, fontFamily:"'DM Mono',monospace" }}>{fmtMoney(p.amount)}</span>
@@ -778,12 +971,14 @@ export default function Dashboard() {
   const [selectedMember, setSelectedMember] = useState(null);
   const [editMember, setEditMember] = useState(null);
   const [alertModal, setAlertModal] = useState(null);
+  const [overdueOpen, setOverdueOpen] = useState(false);
   const [search, setSearch]     = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPlan, setFilterPlan]     = useState("all");
   const [toast, setToast]       = useState(null);
   const [loadingData, setLoadingData] = useState(false);
   const [editPayment, setEditPayment] = useState(null);
+  const [overdueOpen, setOverdueOpen] = useState(false);
 
   const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
 
@@ -805,12 +1000,7 @@ export default function Dashboard() {
   },[]);
 
   const loadPayments = useCallback(async()=>{
-    try {
-      const r=await api.get("/payments?period=month&limit=500");
-      // Ordenar por id DESC como seguro extra (más reciente primero)
-      const sorted = (r.data||[]).sort((a,b)=>b.id-a.id);
-      setPayments(sorted);
-    } catch{}
+    try { const r=await api.get("/payments?period=month&limit=200"); setPayments(r.data||[]); } catch{}
   },[]);
 
   const loadAlerts = useCallback(async()=>{
@@ -833,33 +1023,24 @@ export default function Dashboard() {
 
   const markAttendance = async(member)=>{
     try {
-      if(member){ await api.post("/attendance",{memberId:member.id,memberName:member.name,cedula:member.cedula,plan:member.plan,type:"member"}); showToast(`📋 Entrada: ${member.name}`); }
-      else{ await api.post("/attendance",{memberName:"Visitante",cedula:"—",plan:"Día",type:"visitor"}); showToast("🎫 Visitante registrado"); }
+      if(member) { await api.post("/attendance",{memberId:member.id,memberName:member.name,cedula:member.cedula,plan:member.plan,type:"member"}); showToast(`📋 Entrada: ${member.name}`); }
+      else { await api.post("/attendance",{memberName:"Visitante",cedula:"—",plan:"Día",type:"visitor"}); showToast("🎫 Visitante registrado"); }
       await loadAttendance();
     } catch(e){ showToast("❌ "+(e.response?.data?.error||"Error"),"err"); }
   };
 
   const markExit = async(member)=>{
     try {
-      const entry=attendance.find(a=>Number(a.member_id)===Number(member.id)&&!a.exit_at);
+      const entry = attendance.find(a=>Number(a.member_id)===Number(member.id) && !a.exit_at);
       if(entry){ await api.patch(`/attendance/${entry.id}/exit`); showToast(`↩ Salida: ${member.name}`); await loadAttendance(); }
-      else{ showToast("❌ No se encontró entrada activa","err"); }
+      else { showToast("❌ No se encontró entrada activa","err"); }
     } catch(e){ showToast("❌ "+(e.response?.data?.error||"Error"),"err"); }
   };
 
-  const updatePayment = async(id,data)=>{
-    await api.put(`/payments/${id}`,data);
+  const updatePayment = async(id, data)=>{
+    await api.put(`/payments/${id}`, data);
     showToast("✏️ Pago actualizado");
     await loadPayments();
-  };
-
-  const deletePayment = async(payment)=>{
-    if(!window.confirm(`¿Eliminar el pago de ${payment.member_name} — ${fmtMoney(payment.amount)}?\n\nEsta acción no se puede deshacer.`)) return;
-    try {
-      await api.delete(`/payments/${payment.id}`);
-      showToast("🗑️ Pago eliminado");
-      await loadPayments();
-    } catch(e){ showToast("❌ "+(e.response?.data?.error||"Error al eliminar"),"err"); }
   };
 
   const registerPayment = async(data)=>{
@@ -875,7 +1056,7 @@ export default function Dashboard() {
   };
 
   // ── computed ──────────────────────────────────────────────────────────────
-  const todayPayments = payments.filter(p=>String(p.paid_at).slice(0,10)===todayStr());
+  const todayPayments = payments.filter(p => String(p.paid_at).slice(0,10) === todayStr());
   const todayTotal    = todayPayments.reduce((s,p)=>s+Number(p.amount),0);
   const todaySINPE    = todayPayments.filter(p=>p.method==="SINPE").reduce((s,p)=>s+Number(p.amount),0);
   const todayEfectivo = todayPayments.filter(p=>p.method==="Efectivo").reduce((s,p)=>s+Number(p.amount),0);
@@ -883,48 +1064,70 @@ export default function Dashboard() {
   const activeCount   = members.filter(m=>m.status==="active"&&!m.blocked).length;
   const blockedCount  = members.filter(m=>m.blocked).length;
 
-  // ── RENDERS ───────────────────────────────────────────────────────────────
+  // ── DASHBOARD ─────────────────────────────────────────────────────────────
   const renderDashboard = ()=>(
     <div>
-      {(alerts.expiringToday?.length>0||alerts.expiringSoon?.length>0||alerts.overdue?.length>0)&&(
+      {(alerts.expiringToday?.length>0||alerts.expiringSoon?.length>0||alerts.overdue?.length>0) && (
         <div style={{ marginBottom:20, display:"flex", flexDirection:"column", gap:8 }}>
-          {alerts.expiringToday?.length>0&&(
+          {alerts.expiringToday?.length>0 && (
             <div style={{ background:T.orangeBg, border:`1.5px solid #fed7aa`, borderRadius:14, overflow:"hidden" }}>
               <div onClick={()=>setAlertModal({title:"Vencen HOY",members:alerts.expiringToday,color:T.orange,icon:"🔴",type:"today"})}
                 style={{ padding:"11px 16px", display:"flex", gap:8, alignItems:"center", cursor:"pointer" }}>
                 <span style={{ fontSize:16 }}>🔴</span>
-                <span style={{ color:T.orange, fontSize:13, fontWeight:700, flex:1 }}>{alerts.expiringToday.length} membresía{alerts.expiringToday.length>1?"s":""} vence{alerts.expiringToday.length===1?"":"n"} HOY</span>
+                <span style={{ color:T.orange, fontSize:13, fontWeight:700, flex:1 }}>
+                  {alerts.expiringToday.length} membresía{alerts.expiringToday.length>1?"s":""} vence{alerts.expiringToday.length===1?"":"n"} HOY
+                </span>
                 <span style={{ color:T.orange, fontSize:11, fontWeight:700, background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #fed7aa` }}>Ver y avisar →</span>
               </div>
               <div style={{ borderTop:`1px solid #fed7aa`, padding:"8px 16px", display:"flex", gap:8, flexWrap:"wrap" }}>
-                {alerts.expiringToday.map(m=><span key={m.id} style={{ fontSize:11, color:T.orange, background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #fed7aa`, fontWeight:600 }}>{m.name.split(" ")[0]} · {m.plan}</span>)}
+                {alerts.expiringToday.map(m=>(
+                  <span key={m.id} style={{ fontSize:11, color:T.orange, background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #fed7aa`, fontWeight:600 }}>
+                    {m.name.split(" ")[0]} · {m.plan}
+                  </span>
+                ))}
               </div>
             </div>
           )}
-          {alerts.expiringSoon?.length>0&&(
+          {alerts.expiringSoon?.length>0 && (
             <div style={{ background:T.yellowBg, border:`1.5px solid #fde68a`, borderRadius:14, overflow:"hidden" }}>
               <div onClick={()=>setAlertModal({title:"Vencen en 1-3 días",members:alerts.expiringSoon,color:T.yellow,icon:"⚠️",type:"soon"})}
                 style={{ padding:"11px 16px", display:"flex", gap:8, alignItems:"center", cursor:"pointer" }}>
                 <span style={{ fontSize:16 }}>⚠️</span>
-                <span style={{ color:T.yellow, fontSize:13, fontWeight:700, flex:1 }}>{alerts.expiringSoon.length} vence{alerts.expiringSoon.length===1?"":"n"} en 1-3 días</span>
+                <span style={{ color:T.yellow, fontSize:13, fontWeight:700, flex:1 }}>
+                  {alerts.expiringSoon.length} vence{alerts.expiringSoon.length===1?"":"n"} en 1-3 días
+                </span>
                 <span style={{ color:T.yellow, fontSize:11, fontWeight:700, background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #fde68a` }}>Ver y avisar →</span>
               </div>
               <div style={{ borderTop:`1px solid #fde68a`, padding:"8px 16px", display:"flex", gap:8, flexWrap:"wrap" }}>
-                {alerts.expiringSoon.map(m=><span key={m.id} style={{ fontSize:11, color:T.yellow, background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #fde68a`, fontWeight:600 }}>{m.name.split(" ")[0]} · {diffDays(m.expires_at)}d</span>)}
+                {alerts.expiringSoon.map(m=>(
+                  <span key={m.id} style={{ fontSize:11, color:T.yellow, background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #fde68a`, fontWeight:600 }}>
+                    {m.name.split(" ")[0]} · {diffDays(m.expires_at)}d
+                  </span>
+                ))}
               </div>
             </div>
           )}
-          {alerts.overdue?.length>0&&(
+          {alerts.overdue?.length>0 && (
             <div style={{ background:"#ede9fe", border:`1.5px solid #c4b5fd`, borderRadius:14, overflow:"hidden" }}>
-              <div onClick={()=>setAlertModal({title:"Cuotas vencidas",members:alerts.overdue,color:"#7c3aed",icon:"💸",type:"overdue"})}
+              <div onClick={()=>setOverdueOpen(v=>!v)}
                 style={{ padding:"11px 16px", display:"flex", gap:8, alignItems:"center", cursor:"pointer" }}>
                 <span style={{ fontSize:16 }}>💸</span>
-                <span style={{ color:"#7c3aed", fontSize:13, fontWeight:700, flex:1 }}>{alerts.overdue.length} miembro{alerts.overdue.length>1?"s":""} con cuota vencida</span>
-                <span style={{ color:"#7c3aed", fontSize:11, fontWeight:700, background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #c4b5fd` }}>Ver y avisar →</span>
+                <span style={{ color:"#7c3aed", fontSize:13, fontWeight:700, flex:1 }}>
+                  {alerts.overdue.length} miembro{alerts.overdue.length>1?"s":""} con cuota vencida
+                </span>
+                <span onClick={e=>{ e.stopPropagation(); setAlertModal({title:"Cuotas vencidas",members:alerts.overdue,color:"#7c3aed",icon:"💸",type:"overdue"}); }}
+                  style={{ color:"#7c3aed", fontSize:11, fontWeight:700, background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #c4b5fd`, cursor:"pointer" }}>Ver y avisar →</span>
+                <span style={{ color:"#7c3aed", fontSize:14, fontWeight:700 }}>{overdueOpen?"▲":"▼"}</span>
               </div>
-              <div style={{ borderTop:`1px solid #c4b5fd`, padding:"8px 16px", display:"flex", gap:8, flexWrap:"wrap" }}>
-                {alerts.overdue.map(m=><span key={m.id} style={{ fontSize:11, color:"#7c3aed", background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #c4b5fd`, fontWeight:600 }}>{m.name.split(" ")[0]} · venció {fmtDate(m.expires_at)}</span>)}
-              </div>
+              {overdueOpen && (
+                <div style={{ borderTop:`1px solid #c4b5fd`, padding:"8px 16px", display:"flex", gap:8, flexWrap:"wrap" }}>
+                  {alerts.overdue.map(m=>(
+                    <span key={m.id} style={{ fontSize:11, color:"#7c3aed", background:"#fff", padding:"3px 10px", borderRadius:20, border:`1px solid #c4b5fd`, fontWeight:600 }}>
+                      {m.name.split(" ")[0]} · venció {fmtDate(m.expires_at)}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -932,9 +1135,9 @@ export default function Dashboard() {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
         {[
           { icon:"👥", label:"Miembros Activos", val:activeCount, color:"#6366f1", bg:"#eef2ff" },
-          { icon:"📋", label:"Asistencia Hoy", val:todayAtt.filter(a=>a.type!=="denied").length, color:T.blue, bg:T.blueBg },
-          { icon:"💰", label:"Ingresos Hoy", val:fmtMoney(todayTotal), color:T.green, bg:T.greenBg },
-          { icon:"🚫", label:"Bloqueados", val:blockedCount, color:T.red, bg:T.redBg },
+          { icon:"📋", label:"Asistencia Hoy",   val:todayAtt.filter(a=>a.type!=="denied").length, color:T.blue, bg:T.blueBg },
+          { icon:"💰", label:"Ingresos Hoy",     val:fmtMoney(todayTotal), color:T.green, bg:T.greenBg },
+          { icon:"🚫", label:"Bloqueados",        val:blockedCount, color:T.red, bg:T.redBg },
         ].map(s=>(
           <Card key={s.label} style={{ padding:"18px 20px" }}>
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
@@ -951,13 +1154,15 @@ export default function Dashboard() {
             <span style={{ color:T.text, fontWeight:700, fontSize:14 }}>Entradas de hoy</span>
             <span style={{ background:T.accentBg, color:T.accent, padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:700 }}>{todayAtt.length}</span>
           </div>
-          {todayAtt.length===0&&<div style={{ color:T.text3, fontSize:12, textAlign:"center", padding:20 }}>Sin registros aún</div>}
+          {todayAtt.length===0 && <div style={{ color:T.text3, fontSize:12, textAlign:"center", padding:20 }}>Sin registros aún</div>}
           {[...todayAtt].reverse().slice(0,6).map((a,i)=>(
-            <div key={i} style={{ display:"flex", alignItems:"center", gap:9, padding:"8px 10px", background:a.type==="denied"?"#fee2e2":"#f8fafc", borderRadius:9, marginBottom:5, border:`1px solid ${a.type==="denied"?"#fca5a5":T.border}` }}>
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:9, padding:"8px 10px",
+              background:a.type==="denied"?"#fee2e2":"#f8fafc", borderRadius:9, marginBottom:5,
+              border:`1px solid ${a.type==="denied"?"#fca5a5":T.border}` }}>
               <Avatar name={a.member_name} size={28}/>
               <div style={{ flex:1 }}>
                 <div style={{ color:a.type==="denied"?T.red:T.text, fontSize:12, fontWeight:600 }}>{a.member_name}</div>
-                {a.type==="denied"&&<div style={{ color:T.red, fontSize:10 }}>⛔ Acceso denegado</div>}
+                {a.type==="denied" && <div style={{ color:T.red, fontSize:10 }}>⛔ Acceso denegado</div>}
               </div>
               <span style={{ color:T.text3, fontSize:11, fontFamily:"'DM Mono',monospace" }}>{fmt12h(a.attended_at)}</span>
               <span style={{ width:7, height:7, borderRadius:"50%", background:a.type==="denied"?T.red:a.exit_at?T.text3:T.green }}/>
@@ -979,7 +1184,7 @@ export default function Dashboard() {
               <div style={{ color:T.yellow, fontWeight:800, fontSize:14, fontFamily:"'DM Mono',monospace" }}>{fmtMoney(todayEfectivo)}</div>
             </div>
           </div>
-          {todayPayments.length===0&&<div style={{ color:T.text3, fontSize:12, textAlign:"center", padding:10 }}>Sin pagos hoy</div>}
+          {todayPayments.length===0 && <div style={{ color:T.text3, fontSize:12, textAlign:"center", padding:10 }}>Sin pagos hoy</div>}
           {todayPayments.slice(0,5).map((p,i)=>(
             <div key={i} style={{ display:"flex", alignItems:"center", gap:9, padding:"7px 10px", background:"#f8fafc", borderRadius:9, marginBottom:4, border:`1px solid ${T.border}` }}>
               <span>{p.method==="SINPE"?"📱":"💵"}</span>
@@ -996,36 +1201,47 @@ export default function Dashboard() {
     <div>
       <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
         <input placeholder="🔍  Nombre, cédula o teléfono..." value={search} onChange={e=>setSearch(e.target.value)}
-          style={{ flex:1, minWidth:180, background:T.surface, border:`1.5px solid ${T.border2}`, borderRadius:10, padding:"10px 13px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}/>
+          style={{ flex:1, minWidth:180, background:T.surface, border:`1.5px solid ${T.border2}`,
+            borderRadius:10, padding:"10px 13px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}/>
         {["all","active","overdue","inactive","blocked"].map(s=>(
-          <button key={s} onClick={()=>setFilterStatus(s)} style={{ padding:"8px 12px", borderRadius:9, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
-            border:`2px solid ${filterStatus===s?T.accent:T.border2}`, background:filterStatus===s?T.accentBg:T.surface, color:filterStatus===s?T.accent:T.text2 }}>
+          <button key={s} onClick={()=>setFilterStatus(s)} style={{ padding:"8px 12px", borderRadius:9, fontSize:11, fontWeight:700,
+            cursor:"pointer", fontFamily:"inherit", border:`2px solid ${filterStatus===s?T.accent:T.border2}`,
+            background:filterStatus===s?T.accentBg:T.surface, color:filterStatus===s?T.accent:T.text2 }}>
             {{all:"Todos",active:"Activos",overdue:"Vencidos",inactive:"Inactivos",blocked:"Bloqueados"}[s]}
           </button>
         ))}
-        <select value={filterPlan} onChange={e=>setFilterPlan(e.target.value)} style={{ background:T.surface, border:`1.5px solid ${T.border2}`, borderRadius:9, padding:"8px 12px", color:T.text2, fontSize:11, outline:"none", fontFamily:"inherit" }}>
+        <select value={filterPlan} onChange={e=>setFilterPlan(e.target.value)} style={{ background:T.surface, border:`1.5px solid ${T.border2}`,
+          borderRadius:9, padding:"8px 12px", color:T.text2, fontSize:11, outline:"none", fontFamily:"inherit" }}>
           <option value="all">Todos los planes</option>
           {["Día","Semanal","Quincenal","Mensual","Bimensual"].map(p=><option key={p}>{p}</option>)}
         </select>
       </div>
       <div style={{ color:T.text3, fontSize:11, marginBottom:10 }}>{loadingData?"Buscando...":`${members.length} resultado${members.length!==1?"s":""}`}</div>
       <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
-        {members.map(m=>{ const days=diffDays(m.expires_at); return (
-          <div key={m.id} onClick={()=>setSelectedMember(m)} style={{ background:T.surface, borderRadius:14, padding:"14px 18px", display:"flex", alignItems:"center", gap:14, cursor:"pointer",
-            border:`1.5px solid ${m.blocked?"#fca5a5":days<=3&&days>0?"#fed7aa":T.border}`, boxShadow:"0 1px 3px #00000008" }}
-            onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px #00000012"}
-            onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px #00000008"}>
-            <Avatar name={m.name} size={42}/>
-            <div style={{ flex:1 }}>
-              <div style={{ color:T.text, fontWeight:700, fontSize:14, marginBottom:2 }}>{m.name}</div>
-              <div style={{ color:T.text3, fontSize:12 }}>CI: {m.cedula} · {m.phone}</div>
+        {members.map(m=>{
+          const days=diffDays(m.expires_at);
+          return (
+            <div key={m.id} onClick={()=>setSelectedMember(m)} style={{
+              background:T.surface, borderRadius:14, padding:"14px 18px", display:"flex", alignItems:"center", gap:14, cursor:"pointer",
+              border:`1.5px solid ${m.blocked?"#fca5a5":days<=3&&days>0?"#fed7aa":T.border}`,
+              boxShadow:"0 1px 3px #00000008" }}
+              onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px #00000012"}
+              onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px #00000008"}>
+              <Avatar name={m.name} size={42}/>
+              <div style={{ flex:1 }}>
+                <div style={{ color:T.text, fontWeight:700, fontSize:14, marginBottom:2 }}>{m.name}</div>
+                <div style={{ color:T.text3, fontSize:12 }}>CI: {m.cedula} · {m.phone}</div>
+              </div>
+              <PlanTag plan={m.plan}/>
+              <StatusBadge status={m.status} blocked={m.blocked}/>
+              <div style={{ width:32, height:32, borderRadius:8, flexShrink:0, fontSize:14,
+                background:days<=0?T.redBg:days<=3?T.orangeBg:T.greenBg,
+                display:"flex", alignItems:"center", justifyContent:"center" }}>
+                {days<=0?"⚠️":days<=3?"⏰":"✓"}
+              </div>
             </div>
-            <PlanTag plan={m.plan}/><StatusBadge status={m.status} blocked={m.blocked}/>
-            <div style={{ width:32, height:32, borderRadius:8, flexShrink:0, fontSize:14, background:days<=0?T.redBg:days<=3?T.orangeBg:T.greenBg, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              {days<=0?"⚠️":days<=3?"⏰":"✓"}
-            </div>
-          </div>
-        );})}
+          );
+        })}
         {members.length===0&&!loadingData&&<div style={{ color:T.text3, textAlign:"center", padding:60, fontSize:14 }}>Sin resultados</div>}
       </div>
     </div>
@@ -1052,12 +1268,17 @@ export default function Dashboard() {
         {todayAtt.length===0&&<div style={{ color:T.text3, fontSize:12, textAlign:"center", padding:30 }}>Sin entradas aún</div>}
         <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
           {[...todayAtt].reverse().map((a,i)=>(
-            <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background:a.type==="denied"?"#fee2e2":"#f8fafc", borderRadius:10, border:`1px solid ${a.type==="denied"?"#fca5a5":a.exit_time?T.border:"#86efac"}` }}>
-              <span style={{ width:9, height:9, borderRadius:"50%", flexShrink:0, background:a.type==="denied"?T.red:a.exit_at?T.text3:T.green }}/>
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px",
+              background: a.type==="denied"?"#fee2e2":"#f8fafc", borderRadius:10,
+              border:`1px solid ${a.type==="denied"?"#fca5a5":a.exit_time?T.border:"#86efac"}` }}>
+              <span style={{ width:9, height:9, borderRadius:"50%", flexShrink:0,
+                background:a.type==="denied"?T.red:a.exit_at?T.text3:T.green }}/>
               <Avatar name={a.member_name} size={32}/>
               <div style={{ flex:1 }}>
                 <span style={{ color:T.text, fontSize:13, fontWeight:600 }}>{a.member_name}</span>
-                {a.type==="denied"&&a.notes&&<div style={{ color:T.red, fontSize:10, marginTop:2 }}>⛔ {a.notes}</div>}
+                {a.type==="denied" && a.notes && (
+                  <div style={{ color:T.red, fontSize:10, marginTop:2 }}>⛔ {a.notes}</div>
+                )}
               </div>
               {a.type==="denied"
                 ? <span style={{ fontSize:10, color:T.red, background:"#fee2e2", padding:"3px 9px", borderRadius:10, flexShrink:0, fontWeight:700, border:"1px solid #fca5a5" }}>Acceso denegado</span>
@@ -1069,7 +1290,8 @@ export default function Dashboard() {
                     {a.exit_at
                       ? <span style={{ fontSize:10, color:T.text3, background:"#f1f5f9", padding:"3px 9px", borderRadius:10, flexShrink:0 }}>Salió</span>
                       : <button onClick={async()=>{ await api.patch(`/attendance/${a.id}/exit`); await loadAttendance(); showToast(`↩ Salida: ${a.member_name}`); }}
-                          style={{ flexShrink:0, padding:"4px 11px", borderRadius:8, border:`1.5px solid ${T.orange}`, background:T.orangeBg, color:T.orange, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                          style={{ flexShrink:0, padding:"4px 11px", borderRadius:8, border:`1.5px solid ${T.orange}`,
+                            background:T.orangeBg, color:T.orange, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
                           ↩ Salida
                         </button>}
                   </>
@@ -1112,14 +1334,11 @@ export default function Dashboard() {
               <PlanTag plan={p.plan}/>
               {p.discount>0&&<span style={{ color:T.red, fontSize:10 }}>-{p.discount}%</span>}
               <span style={{ color:T.green, fontWeight:800, fontSize:14, fontFamily:"'DM Mono',monospace" }}>{fmtMoney(p.amount)}</span>
-              <div style={{ display:"flex", gap:5, flexShrink:0 }}>
-                <button onClick={()=>setEditPayment(p)} style={{ padding:"4px 10px", borderRadius:8,
+              {user?.role==="admin" && (
+                <button onClick={()=>setEditPayment(p)} style={{ flexShrink:0, padding:"4px 10px", borderRadius:8,
                   border:`1px solid ${T.border2}`, background:T.surface, color:T.text2,
                   fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>✏️</button>
-                <button onClick={()=>deletePayment(p)} style={{ padding:"4px 10px", borderRadius:8,
-                  border:`1px solid #fca5a5`, background:T.redBg, color:T.red,
-                  fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>🗑️</button>
-              </div>
+              )}
             </div>
           ))}
         </div>
@@ -1128,7 +1347,7 @@ export default function Dashboard() {
   );
 
   const renderBlacklist = ()=>{
-    const blocked=members.filter(m=>m.blocked);
+    const blocked = members.filter(m=>m.blocked);
     return (
       <div>
         <div style={{ background:T.redBg, border:`1.5px solid #fca5a5`, borderRadius:12, padding:"14px 18px", marginBottom:16, display:"flex", alignItems:"center", gap:10 }}>
@@ -1160,7 +1379,8 @@ export default function Dashboard() {
 
   const renderMemberDetail = ()=>{
     if(!selectedMember) return null;
-    const m=selectedMember, days=diffDays(m.expires_at);
+    const m = selectedMember;
+    const days = diffDays(m.expires_at);
     return (
       <Modal title="Perfil del Miembro" onClose={()=>setSelectedMember(null)} width={500}>
         <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:20, padding:16, background:"#f8fafc", border:`1px solid ${T.border}`, borderRadius:14 }}>
@@ -1172,7 +1392,12 @@ export default function Dashboard() {
           </div>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
-          {[{label:"Ingresó",val:fmtDate(m.joined_at)},{label:"Vence",val:fmtDate(m.expires_at),warn:days<=7&&days>=0},{label:"Plan",val:m.plan},{label:"Días restantes",val:days>0?`${days} días`:"Vencido",warn:days<=0}].map(s=>(
+          {[
+            { label:"Ingresó",        val:fmtDate(m.joined_at) },
+            { label:"Vence",          val:fmtDate(m.expires_at), warn:days<=7&&days>=0 },
+            { label:"Plan",           val:m.plan },
+            { label:"Días restantes", val:days>0?`${days} días`:"Vencido", warn:days<=0 },
+          ].map(s=>(
             <div key={s.label} style={{ background:"#f8fafc", border:`1px solid ${T.border}`, borderRadius:10, padding:"10px 14px" }}>
               <div style={{ fontSize:10, color:T.text3, fontWeight:700, marginBottom:3 }}>{s.label.toUpperCase()}</div>
               <div style={{ color:s.warn?T.orange:T.text, fontWeight:700, fontSize:13 }}>{s.val}</div>
@@ -1187,17 +1412,22 @@ export default function Dashboard() {
         </div>
         <button onClick={async()=>{
           if(!window.confirm(`¿Eliminar a ${m.name}? Esta acción no se puede deshacer.`)) return;
-          try { await api.delete(`/members/${m.id}`); showToast(`🗑️ ${m.name} eliminado`); setSelectedMember(null); loadMembers(); loadAlerts(); }
-          catch(e){ showToast("❌ "+(e.response?.data?.error||"Error al eliminar"),"err"); }
-        }} style={{ width:"100%", padding:"9px", borderRadius:10, border:`1.5px solid #fca5a5`, background:T.redBg, color:T.red, fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+          try {
+            await api.delete(`/members/${m.id}`);
+            showToast(`🗑️ ${m.name} eliminado`);
+            setSelectedMember(null);
+            loadMembers(); loadAlerts();
+          } catch(e){ showToast("❌ "+(e.response?.data?.error||"Error al eliminar"),"err"); }
+        }} style={{ width:"100%", padding:"9px", borderRadius:10, border:`1.5px solid #fca5a5`,
+          background:T.redBg, color:T.red, fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer" }}>
           🗑️ Eliminar miembro
         </button>
       </Modal>
     );
   };
 
-  const TABS={dashboard:renderDashboard,members:renderMembers,attendance:renderAttendance,payments:renderPayments,blacklist:renderBlacklist};
-  const LABELS={dashboard:"Dashboard",members:"Miembros",attendance:"Asistencia",payments:"Pagos",blacklist:"Lista Negra"};
+  const TABS = { dashboard:renderDashboard, members:renderMembers, attendance:renderAttendance, payments:renderPayments, blacklist:renderBlacklist };
+  const LABELS = { dashboard:"Dashboard", members:"Miembros", attendance:"Asistencia", payments:"Pagos", blacklist:"Lista Negra" };
 
   return (
     <>
@@ -1210,10 +1440,13 @@ export default function Dashboard() {
         @keyframes toastIn{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
       `}</style>
       <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"'DM Sans',sans-serif", color:T.text, display:"flex" }}>
-        <div style={{ position:"fixed", top:0, left:0, bottom:0, width:220, background:T.sidebar, display:"flex", flexDirection:"column", zIndex:100, boxShadow:"2px 0 10px #0000001a" }}>
+        {/* SIDEBAR */}
+        <div style={{ position:"fixed", top:0, left:0, bottom:0, width:220, background:T.sidebar,
+          display:"flex", flexDirection:"column", zIndex:100, boxShadow:"2px 0 10px #0000001a" }}>
           <div style={{ padding:"22px 20px 18px", borderBottom:"1px solid #334155" }}>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <div style={{ width:38, height:38, borderRadius:11, background:"linear-gradient(135deg,#6366f1,#818cf8)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>💪</div>
+              <div style={{ width:38, height:38, borderRadius:11, background:"linear-gradient(135deg,#6366f1,#818cf8)",
+                display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>💪</div>
               <div>
                 <div style={{ fontWeight:900, fontSize:15, color:"#fff" }}>GymOS</div>
                 <div style={{ fontSize:10, color:"#64748b" }}>{user?.gym?.name}</div>
@@ -1222,33 +1455,46 @@ export default function Dashboard() {
           </div>
           <nav style={{ padding:"10px 10px", flex:1 }}>
             {NAV.map(item=>(
-              <button key={item.id} onClick={()=>setTab(item.id)} style={{ width:"100%", display:"flex", alignItems:"center", gap:10, padding:"11px 12px", borderRadius:10, marginBottom:3, border:"none", cursor:"pointer", textAlign:"left", fontFamily:"inherit", fontSize:13, fontWeight:tab===item.id?700:400, background:tab===item.id?"#334155":"transparent", color:tab===item.id?"#fff":"#94a3b8" }}>
+              <button key={item.id} onClick={()=>setTab(item.id)} style={{
+                width:"100%", display:"flex", alignItems:"center", gap:10, padding:"11px 12px",
+                borderRadius:10, marginBottom:3, border:"none", cursor:"pointer", textAlign:"left",
+                fontFamily:"inherit", fontSize:13, fontWeight:tab===item.id?700:400,
+                background:tab===item.id?"#334155":"transparent", color:tab===item.id?"#fff":"#94a3b8" }}>
                 <span>{item.icon}</span><span>{item.label}</span>
-                {item.id==="blacklist"&&blockedCount>0&&<span style={{ marginLeft:"auto", background:"#ef4444", color:"#fff", borderRadius:20, padding:"1px 7px", fontSize:10, fontWeight:800 }}>{blockedCount}</span>}
+                {item.id==="blacklist"&&blockedCount>0&&(
+                  <span style={{ marginLeft:"auto", background:"#ef4444", color:"#fff", borderRadius:20, padding:"1px 7px", fontSize:10, fontWeight:800 }}>{blockedCount}</span>
+                )}
               </button>
             ))}
           </nav>
           <div style={{ padding:"10px 10px 20px", borderTop:"1px solid #334155" }}>
             <div style={{ fontSize:10, color:"#475569", fontWeight:700, letterSpacing:"1px", padding:"0 12px", marginBottom:8 }}>ACCIONES RÁPIDAS</div>
             {[
-              { icon:"👤", label:"Nuevo Miembro", action:"member", color:"#818cf8" },
-              { icon:"📋", label:"Marcar Asistencia", action:"attendance", color:"#38bdf8" },
-              { icon:"💳", label:"Registrar Pago", action:"payment", color:"#4ade80" },
-              { icon:"🗂️", label:"Cierre de Caja", action:"cashreport", color:"#fbbf24" },
+              { icon:"👤", label:"Nuevo Miembro",    action:"member",     color:"#818cf8" },
+              { icon:"📋", label:"Marcar Asistencia",action:"attendance", color:"#38bdf8" },
+              { icon:"💳", label:"Registrar Pago",   action:"payment",    color:"#4ade80" },
+              { icon:"🗂️", label:"Cierre de Caja",   action:"cashreport", color:"#fbbf24" },
             ].map(a=>(
-              <button key={a.action} onClick={()=>setModal(a.action)} style={{ width:"100%", display:"flex", alignItems:"center", gap:9, padding:"9px 12px", borderRadius:8, marginBottom:2, border:"none", cursor:"pointer", textAlign:"left", background:"transparent", color:a.color, fontWeight:600, fontSize:12, fontFamily:"inherit" }}>
-                <span>{a.icon}</span><span>{a.label}</span>
-              </button>
+              <button key={a.action} onClick={()=>setModal(a.action)} style={{
+                width:"100%", display:"flex", alignItems:"center", gap:9, padding:"9px 12px",
+                borderRadius:8, marginBottom:2, border:"none", cursor:"pointer", textAlign:"left",
+                background:"transparent", color:a.color, fontWeight:600, fontSize:12, fontFamily:"inherit"
+              }}><span>{a.icon}</span><span>{a.label}</span></button>
             ))}
-            <button onClick={logout} style={{ width:"100%", display:"flex", alignItems:"center", gap:9, padding:"9px 12px", borderRadius:8, marginTop:6, border:"1px solid #334155", cursor:"pointer", background:"transparent", color:"#64748b", fontWeight:600, fontSize:12, fontFamily:"inherit" }}>🚪 Cerrar sesión</button>
+            <button onClick={logout} style={{ width:"100%", display:"flex", alignItems:"center", gap:9, padding:"9px 12px",
+              borderRadius:8, marginTop:6, border:"1px solid #334155", cursor:"pointer",
+              background:"transparent", color:"#64748b", fontWeight:600, fontSize:12, fontFamily:"inherit" }}>🚪 Cerrar sesión</button>
           </div>
         </div>
 
+        {/* MAIN */}
         <div style={{ marginLeft:220, flex:1, padding:"28px 28px 48px" }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
             <div>
               <h1 style={{ fontSize:22, fontWeight:900, color:T.text }}>{LABELS[tab]}</h1>
-              <p style={{ color:T.text3, fontSize:12, marginTop:2 }}>{new Date().toLocaleDateString("es-CR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p>
+              <p style={{ color:T.text3, fontSize:12, marginTop:2 }}>
+                {new Date().toLocaleDateString("es-CR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
+              </p>
             </div>
             <div style={{ display:"flex", gap:8 }}>
               {tab==="members"    && <Btn onClick={()=>setModal("member")}>+ Nuevo Miembro</Btn>}
@@ -1262,17 +1508,25 @@ export default function Dashboard() {
           {TABS[tab]?.()}
         </div>
 
+        {/* MODALS */}
         {modal==="member"     && <MemberModal onClose={()=>setModal(null)} onSave={saveMember}/>}
         {modal==="attendance" && <AttendanceModal members={members} todayAttendance={todayAtt} onClose={()=>setModal(null)} onMark={markAttendance} onExit={markExit}/>}
         {modal==="payment"    && <PaymentModal members={members} onClose={()=>setModal(null)} onSave={registerPayment}/>}
         {modal==="cashreport" && <CashReportModal onClose={()=>setModal(null)}/>}
-        {editPayment&&<EditPaymentModal payment={editPayment} onClose={()=>setEditPayment(null)} onSave={async(data)=>{ await updatePayment(editPayment.id,data); setEditPayment(null); }}/>}
-        {editMember&&<MemberModal member={editMember} onClose={()=>setEditMember(null)} onSave={saveMember}/>}
-        {selectedMember&&!editMember&&renderMemberDetail()}
-        {alertModal&&<AlertListModal {...alertModal} onClose={()=>setAlertModal(null)} onSelectMember={m=>setSelectedMember(m)}/>}
+        {editPayment && (
+          <EditPaymentModal payment={editPayment} onClose={()=>setEditPayment(null)}
+            onSave={async(data)=>{ await updatePayment(editPayment.id, data); setEditPayment(null); }}/>
+        )}}
+        {editMember && <MemberModal member={editMember} onClose={()=>setEditMember(null)} onSave={saveMember}/>}
+        {selectedMember&&!editMember && renderMemberDetail()}
+        {alertModal && <AlertListModal {...alertModal} onClose={()=>setAlertModal(null)} onSelectMember={m=>setSelectedMember(m)}/>}
 
-        {toast&&(
-          <div style={{ position:"fixed", bottom:24, right:24, background:toast.type==="err"?T.redBg:T.surface, border:`1px solid ${toast.type==="err"?"#fca5a5":T.border}`, borderRadius:12, padding:"12px 18px", color:toast.type==="err"?T.red:T.text, fontSize:13, fontWeight:600, boxShadow:"0 8px 24px #00000018", zIndex:9999, animation:"toastIn 0.3s cubic-bezier(.22,1,.36,1)" }}>{toast.msg}</div>
+        {/* Toast */}
+        {toast && (
+          <div style={{ position:"fixed", bottom:24, right:24, background:toast.type==="err"?T.redBg:T.surface,
+            border:`1px solid ${toast.type==="err"?"#fca5a5":T.border}`, borderRadius:12, padding:"12px 18px",
+            color:toast.type==="err"?T.red:T.text, fontSize:13, fontWeight:600,
+            boxShadow:"0 8px 24px #00000018", zIndex:9999, animation:"toastIn 0.3s cubic-bezier(.22,1,.36,1)" }}>{toast.msg}</div>
         )}
       </div>
     </>
