@@ -14,8 +14,7 @@ const fmtMoney  = (n) => `₡${Number(n||0).toLocaleString("es-CR")}`;
 const fmt12h = (t) => {
   if(!t) return "";
   try {
-    // Extraer HH:MM directo del string que manda el backend
-    const timeStr = String(t).slice(11, 16); // "HH:MM"
+    const timeStr = String(t).slice(11, 16); // extrae "HH:MM" directamente
     const [h, m] = timeStr.split(":").map(Number);
     const ampm = h >= 12 ? "p. m." : "a. m.";
     const h12 = h % 12 || 12;
