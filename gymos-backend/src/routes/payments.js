@@ -120,8 +120,7 @@ router.post("/", async (req, res) => {
     `, [gymId, memberId||null, memberName, cedula||null, plan,
         finalAmount, method, parseInt(discount), type, req.user.userId]);
 
-    // Renovar membresía: extender desde vencimiento actual si aún vigente, o desde hoy si ya venció
-    // NUNCA modifica joined_at
+    // Renovar membresía
     if (type === "member" && memberId) {
       await client.query(`
         UPDATE members
@@ -144,7 +143,6 @@ router.post("/", async (req, res) => {
 });
 
 // ── PUT /api/payments/:id ────────────────────────────────────────────────────
-// Solo admin puede editar pagos
 router.put("/:id", async (req, res) => {
   if (req.user.role !== "admin")
     return res.status(403).json({ error: "Solo administradores pueden editar pagos" });
@@ -172,6 +170,28 @@ router.put("/:id", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error al editar pago" });
+  }
+});
+
+// ── DELETE /api/payments/:id ─────────────────────────────────────────────────
+router.delete("/:id", async (req, res) => {
+  if (req.user.role !== "admin")
+    return res.status(403).json({ error: "Solo administradores pueden eliminar pagos" });
+
+  const gymId = req.user.gymId;
+
+  try {
+    const result = await pool.query(`
+      DELETE FROM payments
+      WHERE id=$1 AND gym_id=$2
+      RETURNING *
+    `, [req.params.id, gymId]);
+
+    if (!result.rows[0]) return res.status(404).json({ error: "Pago no encontrado" });
+    res.json({ success: true, deleted: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al eliminar pago" });
   }
 });
 
