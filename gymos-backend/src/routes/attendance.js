@@ -11,16 +11,16 @@ const CR_TODAY = `(NOW() AT TIME ZONE 'America/Costa_Rica')::date`;
 // ── GET /api/attendance ──────────────────────────────────────────────────────
 router.get("/", async (req, res) => {
   const gymId = req.user.gymId;
-  // Si viene date en query usarla, si no usar hoy en CR
   const date = req.query.date || null;
 
   try {
     const result = await pool.query(`
       SELECT id, member_id, member_name, cedula, plan, type, date, notes,
-             attended_at, exit_at
+             (attended_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Costa_Rica') AS attended_at,
+             (exit_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Costa_Rica') AS exit_at
       FROM attendance
       WHERE gym_id = $1 AND date = ${date ? '$2' : CR_TODAY}
-      ORDER BY attended_at DESC
+      ORDER BY attended_at ASC
     `, date ? [gymId, date] : [gymId]);
 
     res.json(result.rows);
@@ -68,7 +68,7 @@ router.post("/", async (req, res) => {
       INSERT INTO attendance (gym_id, member_id, member_name, cedula, plan, type, date, created_by)
       VALUES ($1,$2,$3,$4,$5,$6, ${CR_TODAY}, $7)
       RETURNING *,
-        TO_CHAR(attended_at AT TIME ZONE 'America/Costa_Rica', 'HH24:MI') AS time,
+        (attended_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Costa_Rica') AS attended_at,
         NULL AS exit_time
     `, [gymId, memberId || null, memberName, cedula || null, plan, type, req.user.userId]);
 
@@ -87,8 +87,8 @@ router.patch("/:id/exit", async (req, res) => {
       UPDATE attendance SET exit_at = NOW()
       WHERE id = $1 AND gym_id = $2 AND exit_at IS NULL
       RETURNING *,
-        TO_CHAR(attended_at AT TIME ZONE 'America/Costa_Rica', 'HH24:MI') AS time,
-        TO_CHAR(exit_at AT TIME ZONE 'America/Costa_Rica', 'HH24:MI') AS exit_time
+        (attended_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Costa_Rica') AS attended_at,
+        (exit_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Costa_Rica') AS exit_at
     `, [req.params.id, gymId]);
     if (!result.rows[0]) return res.status(404).json({ error: "Registro no encontrado" });
     res.json(result.rows[0]);
@@ -98,7 +98,6 @@ router.patch("/:id/exit", async (req, res) => {
 });
 
 // ── POST /api/attendance/denied ──────────────────────────────────────────────
-// Registra un intento de acceso denegado desde el kiosko
 router.post("/denied", async (req, res) => {
   const { gymId, memberName, cedula, reason } = req.body;
   if (!gymId || !memberName) return res.status(400).json({ error: "Datos incompletos" });
@@ -109,7 +108,6 @@ router.post("/denied", async (req, res) => {
       VALUES ($1, NULL, $2, $3, 'N/A', 'denied', (NOW() AT TIME ZONE 'America/Costa_Rica')::date, NULL)
     `, [parseInt(gymId), memberName, cedula || null]);
 
-    // Guardar razón en notes usando una actualización inmediata
     await pool.query(`
       UPDATE attendance SET notes = $1
       WHERE gym_id = $2 AND member_name = $3 AND type = 'denied'
