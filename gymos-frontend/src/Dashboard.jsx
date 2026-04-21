@@ -971,8 +971,7 @@ export default function Dashboard() {
   const [selectedMember, setSelectedMember] = useState(null);
   const [editMember, setEditMember] = useState(null);
   const [alertModal, setAlertModal] = useState(null);
-  const [overdueOpen, setOverdueOpen] = useState(false);
-  const [search, setSearch]     = useState("");
+    const [search, setSearch]     = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPlan, setFilterPlan]     = useState("all");
   const [toast, setToast]       = useState(null);
