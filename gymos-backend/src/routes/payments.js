@@ -5,10 +5,12 @@ const { auth } = require("../middleware/auth");
 const router = express.Router();
 router.use(auth);
 
-const PLAN_DAYS = { "Día": 1, Semanal: 7, Quincenal: 15, Mensual: 30, Bimensual: 60 };
-
-// Fecha de hoy en hora de Costa Rica
 const CR_TODAY = `(NOW() AT TIME ZONE 'America/Costa_Rica')::date`;
+
+// Planes que usan meses exactos (respetan el día de pago)
+const MONTH_PLANS = { Mensual: 1, Bimensual: 2 };
+// Planes que usan días corridos
+const DAY_PLANS   = { "Día": 1, Semanal: 7, Quincenal: 15 };
 
 // ── GET /api/payments ────────────────────────────────────────────────────────
 router.get("/", async (req, res) => {
@@ -29,7 +31,7 @@ router.get("/", async (req, res) => {
              paid_at, created_at
       FROM payments
       WHERE gym_id = $1 ${dateFilter} ${methodFilter}
-      ORDER BY created_at DESC
+      ORDER BY id DESC
       LIMIT $2 OFFSET $3
     `, [gymId, parseInt(limit), offset]);
 
@@ -73,7 +75,7 @@ router.get("/report", async (req, res) => {
       pool.query(`
         SELECT id, member_name, plan, amount, method, discount, type, paid_at
         FROM payments WHERE gym_id=$1 AND ${dateFilter}
-        ORDER BY paid_at DESC, created_at DESC
+        ORDER BY id DESC
       `, [gymId]),
     ]);
 
@@ -105,8 +107,6 @@ router.post("/", async (req, res) => {
   if (!finalAmount || finalAmount <= 0)
     return res.status(400).json({ error: "Monto inválido" });
 
-  const days = PLAN_DAYS[plan] || 30;
-
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -115,20 +115,43 @@ router.post("/", async (req, res) => {
     const payRes = await client.query(`
       INSERT INTO payments
         (gym_id, member_id, member_name, cedula, plan, amount, method, discount, type, created_by, paid_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, (NOW() AT TIME ZONE 'America/Costa_Rica')::date)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, ${CR_TODAY})
       RETURNING *
     `, [gymId, memberId||null, memberName, cedula||null, plan,
         finalAmount, method, parseInt(discount), type, req.user.userId]);
 
-    // Renovar membresía
+    // Renovar membresía solo para miembros registrados
     if (type === "member" && memberId) {
-      await client.query(`
-        UPDATE members
-        SET status = 'active',
-            expires_at = GREATEST(expires_at, ${CR_TODAY}) + $1::interval,
-            updated_at = NOW()
-        WHERE id = $2 AND gym_id = $3
-      `, [`${days} days`, memberId, gymId]);
+
+      if (MONTH_PLANS[plan]) {
+        // ── Planes mensuales/bimensuales: respetar el día de pago ──────────
+        // Tomamos la fecha de vencimiento actual (o hoy si ya venció)
+        // y sumamos N meses exactos, conservando el día del mes original
+        const months = MONTH_PLANS[plan];
+        await client.query(`
+          UPDATE members
+          SET status     = 'active',
+              expires_at = (
+                -- Base: el mayor entre vencimiento actual y hoy
+                GREATEST(expires_at, ${CR_TODAY})
+                -- Sumar N meses exactos (PostgreSQL respeta el día del mes)
+                + ($1 || ' months')::interval
+              ),
+              updated_at = NOW()
+          WHERE id = $2 AND gym_id = $3
+        `, [`${months}`, memberId, gymId]);
+
+      } else {
+        // ── Planes cortos: días corridos (Día, Semanal, Quincenal) ─────────
+        const days = DAY_PLANS[plan] || 30;
+        await client.query(`
+          UPDATE members
+          SET status     = 'active',
+              expires_at = GREATEST(expires_at, ${CR_TODAY}) + ($1 || ' days')::interval,
+              updated_at = NOW()
+          WHERE id = $2 AND gym_id = $3
+        `, [`${days}`, memberId, gymId]);
+      }
     }
 
     await client.query("COMMIT");
@@ -144,9 +167,6 @@ router.post("/", async (req, res) => {
 
 // ── PUT /api/payments/:id ────────────────────────────────────────────────────
 router.put("/:id", async (req, res) => {
-  if (req.user.role !== "admin")
-    return res.status(403).json({ error: "Solo administradores pueden editar pagos" });
-
   const { method, amount, plan, discount = 0 } = req.body;
   const gymId = req.user.gymId;
 
@@ -175,9 +195,6 @@ router.put("/:id", async (req, res) => {
 
 // ── DELETE /api/payments/:id ─────────────────────────────────────────────────
 router.delete("/:id", async (req, res) => {
-  if (req.user.role !== "admin")
-    return res.status(403).json({ error: "Solo administradores pueden eliminar pagos" });
-
   const gymId = req.user.gymId;
 
   try {
