@@ -246,4 +246,31 @@ router.delete("/:id", adminOnly, async (req, res) => {
   }
 });
 
+router.get("/:id/payments", async (req, res) => {
+  const gymId = req.user.gymId;
+  try {
+    const result = await pool.query(`
+      SELECT id, plan, amount, method, discount, paid_at
+      FROM payments WHERE gym_id=$1 AND member_id=$2
+      ORDER BY paid_at DESC, id DESC
+    `, [gymId, req.params.id]);
+    res.json(result.rows);
+  } catch(err) { res.status(500).json({ error:"Error al obtener pagos del miembro" }); }
+});
+
+router.get("/:id/attendance", async (req, res) => {
+  const gymId = req.user.gymId;
+  const { month, year } = req.query;
+  try {
+    const result = await pool.query(`
+      SELECT id, date, attended_at, exit_at, type
+      FROM attendance
+      WHERE gym_id=$1 AND member_id=$2 AND type='member'
+        AND EXTRACT(MONTH FROM date)=$3 AND EXTRACT(YEAR FROM date)=$4
+      ORDER BY date DESC, attended_at DESC
+    `, [gymId, req.params.id, parseInt(month), parseInt(year)]);
+    res.json(result.rows);
+  } catch(err) { res.status(500).json({ error:"Error al obtener asistencia del miembro" }); }
+});
+
 module.exports = router;

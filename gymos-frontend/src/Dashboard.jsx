@@ -236,9 +236,7 @@ function ChangePasswordModal({ onClose }) {
             fontSize:40, margin:"0 auto 18px",
             boxShadow:"0 8px 24px rgba(5,150,105,0.3)" }}>✅</div>
           <div style={{ color:T.green, fontWeight:800, fontSize:18, marginBottom:8 }}>¡Contraseña actualizada!</div>
-          <div style={{ color:T.text2, fontSize:13, marginBottom:24, lineHeight:1.6 }}>
-            Tu contraseña se cambió correctamente.
-          </div>
+          <div style={{ color:T.text2, fontSize:13, marginBottom:24, lineHeight:1.6 }}>Tu contraseña se cambió correctamente.</div>
           <Btn onClick={onClose} style={{ width:"100%" }}>Cerrar</Btn>
         </div>
       ) : (
@@ -290,9 +288,7 @@ function ChangePasswordModal({ onClose }) {
           <div style={{ background:"#f8fafc", border:`1px solid ${T.border}`, borderRadius:12,
             padding:"10px 14px", marginBottom:18, display:"flex", alignItems:"center", gap:8 }}>
             <span>💡</span>
-            <span style={{ color:T.text2, fontSize:12 }}>
-              Usá una combinación de letras, números y símbolos para una contraseña más segura.
-            </span>
+            <span style={{ color:T.text2, fontSize:12 }}>Usá una combinación de letras, números y símbolos para una contraseña más segura.</span>
           </div>
           <div style={{ display:"flex", gap:8 }}>
             <Btn variant="ghost" onClick={onClose} style={{ flex:1 }}>Cancelar</Btn>
@@ -300,6 +296,231 @@ function ChangePasswordModal({ onClose }) {
               {loading?"Guardando...":"🔒 Cambiar Contraseña"}
             </Btn>
           </div>
+        </>
+      )}
+    </Modal>
+  );
+}
+
+// ─── MEMBER PAYMENT HISTORY MODAL ────────────────────────────────────────────
+function MemberPaymentHistoryModal({ member, onClose }) {
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading]   = useState(true);
+
+  useEffect(()=>{
+    api.get(`/members/${member.id}/payments`)
+      .then(r=>setPayments(r.data||[]))
+      .finally(()=>setLoading(false));
+  },[member.id]);
+
+  const total = payments.reduce((s,p)=>s+Number(p.amount),0);
+
+  const downloadPDF = async () => {
+    if(!window.jspdf){ await new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({unit:"mm",format:"a4"});
+    const W=210, pad=20; let y=0;
+    doc.setFillColor(99,102,241); doc.rect(0,0,W,38,"F");
+    doc.setTextColor(255,255,255); doc.setFontSize(18); doc.setFont("helvetica","bold");
+    doc.text("GymTactik",pad,16);
+    doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(199,210,254);
+    doc.text(`Historial de Pagos — ${member.name}`,pad,25);
+    doc.text(`Generado: ${new Date().toLocaleDateString("es-CR")}`,pad,32);
+    y=48;
+    doc.setFillColor(238,242,255); doc.setDrawColor(199,210,254); doc.roundedRect(pad,y,W-pad*2,22,4,4,"FD");
+    doc.setTextColor(99,102,241); doc.setFontSize(9); doc.setFont("helvetica","bold");
+    doc.text(`${member.name}  ·  CI: ${member.cedula}  ·  Plan: ${member.plan}`,pad+6,y+9);
+    doc.setTextColor(71,85,105); doc.setFont("helvetica","normal");
+    doc.text(`Total pagado: ₡${Number(total).toLocaleString("es-CR")}  ·  ${payments.length} pagos registrados`,pad+6,y+17);
+    y+=30;
+    doc.setFillColor(30,41,59); doc.rect(pad,y,W-pad*2,10,"F");
+    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont("helvetica","bold");
+    doc.text("FECHA",pad+4,y+7); doc.text("PLAN",pad+38,y+7); doc.text("MÉTODO",pad+70,y+7);
+    doc.text("DESCUENTO",pad+105,y+7); doc.text("MONTO",W-pad-4,y+7,{align:"right"});
+    y+=10;
+    payments.forEach((p,i)=>{
+      if(y>270){ doc.addPage(); y=20; }
+      doc.setFillColor(i%2===0?248:255,i%2===0?250:255,i%2===0?252:255);
+      doc.rect(pad,y,W-pad*2,9,"F");
+      doc.setTextColor(30,41,59); doc.setFont("helvetica","normal"); doc.setFontSize(8);
+      doc.text(fmtDate(p.paid_at),pad+4,y+6);
+      doc.text(p.plan,pad+38,y+6);
+      doc.text(p.method,pad+70,y+6);
+      doc.text(p.discount>0?`${p.discount}%`:"—",pad+105,y+6);
+      doc.setFont("helvetica","bold"); doc.setTextColor(5,150,105);
+      doc.text(`₡${Number(p.amount).toLocaleString("es-CR")}`,W-pad-4,y+6,{align:"right"});
+      y+=9;
+    });
+    y+=4; doc.setDrawColor(226,232,240); doc.line(pad,y,W-pad,y); y+=6;
+    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(30,41,59);
+    doc.text("TOTAL",pad+4,y);
+    doc.setTextColor(5,150,105);
+    doc.text(`₡${Number(total).toLocaleString("es-CR")}`,W-pad-4,y,{align:"right"});
+    y+=10; doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(148,163,184);
+    doc.text("GymTactik · KI Technologies · Reporte generado automáticamente",W/2,y,{align:"center"});
+    doc.save(`pagos-${member.name.replace(/ /g,"-")}.pdf`);
+  };
+
+  return (
+    <Modal title="💳 Historial de Pagos" onClose={onClose} width={520}>
+      <div style={{ background:T.accentBg, border:`1px solid #c7d2fe`, borderRadius:12,
+        padding:"12px 16px", marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div>
+          <div style={{ fontWeight:700, color:T.text, fontSize:13 }}>{member.name}</div>
+          <div style={{ color:T.text3, fontSize:11 }}>{payments.length} pagos registrados</div>
+        </div>
+        <div style={{ textAlign:"right" }}>
+          <div style={{ fontSize:10, color:T.text3, fontWeight:600 }}>TOTAL PAGADO</div>
+          <div style={{ fontWeight:900, color:T.green, fontSize:18, fontFamily:"'DM Mono',monospace" }}>
+            ₡{Number(total).toLocaleString("es-CR")}
+          </div>
+        </div>
+      </div>
+      {loading && <div style={{ textAlign:"center", color:T.text3, padding:30 }}>Cargando...</div>}
+      {!loading && payments.length===0 && (
+        <div style={{ textAlign:"center", color:T.text3, padding:30, fontSize:13 }}>Sin pagos registrados</div>
+      )}
+      {!loading && payments.length>0 && (
+        <>
+          <div style={{ maxHeight:320, overflowY:"auto", display:"flex", flexDirection:"column", gap:5, marginBottom:14 }}>
+            {payments.map((p,i)=>(
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px",
+                background:i%2===0?"#f8fafc":T.surface, borderRadius:10, border:`1px solid ${T.border}` }}>
+                <span style={{ fontSize:18 }}>{p.method==="SINPE"?"📱":"💵"}</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ color:T.text, fontSize:12, fontWeight:600 }}>{fmtDate(p.paid_at)}</div>
+                  <div style={{ color:T.text3, fontSize:11 }}>{p.method} · {p.plan}{p.discount>0?` · -${p.discount}%`:""}</div>
+                </div>
+                <span style={{ color:T.green, fontWeight:800, fontSize:13, fontFamily:"'DM Mono',monospace" }}>
+                  ₡{Number(p.amount).toLocaleString("es-CR")}
+                </span>
+              </div>
+            ))}
+          </div>
+          <button onClick={downloadPDF} style={{
+            width:"100%", padding:"11px", borderRadius:12, border:"none", cursor:"pointer",
+            background:"linear-gradient(135deg,#6366f1,#818cf8)", color:"#fff",
+            fontFamily:"inherit", fontSize:13, fontWeight:700,
+            boxShadow:"0 4px 14px rgba(99,102,241,0.3)",
+          }}>📄 Exportar PDF</button>
+        </>
+      )}
+    </Modal>
+  );
+}
+
+// ─── MEMBER ATTENDANCE HISTORY MODAL ─────────────────────────────────────────
+function MemberAttendanceHistoryModal({ member, onClose }) {
+  const [records, setRecords]   = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [selMonth, setSelMonth] = useState(new Date().getMonth()+1);
+  const [selYear, setSelYear]   = useState(new Date().getFullYear());
+  const MONTHS=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const YEARS=[new Date().getFullYear()-1, new Date().getFullYear()];
+
+  useEffect(()=>{
+    setLoading(true);
+    api.get(`/members/${member.id}/attendance?month=${selMonth}&year=${selYear}`)
+      .then(r=>setRecords(r.data||[]))
+      .finally(()=>setLoading(false));
+  },[member.id, selMonth, selYear]);
+
+  const downloadPDF = async () => {
+    if(!window.jspdf){ await new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({unit:"mm",format:"a4"});
+    const W=210, pad=20; let y=0;
+    doc.setFillColor(5,150,105); doc.rect(0,0,W,38,"F");
+    doc.setTextColor(255,255,255); doc.setFontSize(18); doc.setFont("helvetica","bold");
+    doc.text("GymTactik",pad,16);
+    doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(209,250,229);
+    doc.text(`Historial de Asistencia — ${member.name}`,pad,25);
+    doc.text(`${MONTHS[selMonth-1]} ${selYear}`,pad,32);
+    y=48;
+    doc.setFillColor(240,253,244); doc.setDrawColor(134,239,172); doc.roundedRect(pad,y,W-pad*2,22,4,4,"FD");
+    doc.setTextColor(6,95,70); doc.setFontSize(9); doc.setFont("helvetica","bold");
+    doc.text(`${member.name}  ·  CI: ${member.cedula}  ·  Plan: ${member.plan}`,pad+6,y+9);
+    doc.setFont("helvetica","normal"); doc.setTextColor(71,85,105);
+    doc.text(`Total de visitas en ${MONTHS[selMonth-1]}: ${records.length} días`,pad+6,y+17);
+    y+=30;
+    doc.setFillColor(30,41,59); doc.rect(pad,y,W-pad*2,10,"F");
+    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont("helvetica","bold");
+    doc.text("FECHA",pad+4,y+7); doc.text("ENTRADA",pad+60,y+7); doc.text("SALIDA",pad+110,y+7); doc.text("DURACIÓN",W-pad-4,y+7,{align:"right"});
+    y+=10;
+    records.forEach((r,i)=>{
+      if(y>270){ doc.addPage(); y=20; }
+      doc.setFillColor(i%2===0?248:255,i%2===0?250:255,i%2===0?252:255);
+      doc.rect(pad,y,W-pad*2,9,"F");
+      doc.setTextColor(30,41,59); doc.setFont("helvetica","normal"); doc.setFontSize(8);
+      doc.text(fmtDate(r.date),pad+4,y+6);
+      doc.text(fmt12h(r.attended_at),pad+60,y+6);
+      doc.text(r.exit_at?fmt12h(r.exit_at):"—",pad+110,y+6);
+      if(r.exit_at){
+        const mins=Math.round((new Date(r.exit_at)-new Date(r.attended_at))/60000);
+        doc.text(`${mins} min`,W-pad-4,y+6,{align:"right"});
+      } else { doc.text("—",W-pad-4,y+6,{align:"right"}); }
+      y+=9;
+    });
+    y+=4; doc.setDrawColor(226,232,240); doc.line(pad,y,W-pad,y); y+=6;
+    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(30,41,59);
+    doc.text(`Total: ${records.length} visitas en ${MONTHS[selMonth-1]} ${selYear}`,pad+4,y);
+    y+=8; doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(148,163,184);
+    doc.text("GymTactik · KI Technologies · Reporte generado automáticamente",W/2,y,{align:"center"});
+    doc.save(`asistencia-${member.name.replace(/ /g,"-")}-${selMonth}-${selYear}.pdf`);
+  };
+
+  return (
+    <Modal title="📋 Historial de Asistencia" onClose={onClose} width={520}>
+      <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+        <select value={selMonth} onChange={e=>setSelMonth(parseInt(e.target.value))}
+          style={{ flex:2, background:T.surface, border:`1.5px solid ${T.border}`, borderRadius:10,
+            padding:"9px 12px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}>
+          {MONTHS.map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+        </select>
+        <select value={selYear} onChange={e=>setSelYear(parseInt(e.target.value))}
+          style={{ flex:1, background:T.surface, border:`1.5px solid ${T.border}`, borderRadius:10,
+            padding:"9px 12px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}>
+          {YEARS.map(y=><option key={y} value={y}>{y}</option>)}
+        </select>
+      </div>
+      <div style={{ background:T.greenBg, border:`1px solid #86efac`, borderRadius:12,
+        padding:"10px 16px", marginBottom:14, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ fontWeight:700, color:T.text, fontSize:13 }}>{member.name}</div>
+        <div style={{ color:T.green, fontWeight:800, fontSize:15 }}>{records.length} visitas</div>
+      </div>
+      {loading && <div style={{ textAlign:"center", color:T.text3, padding:30 }}>Cargando...</div>}
+      {!loading && records.length===0 && (
+        <div style={{ textAlign:"center", color:T.text3, padding:30, fontSize:13 }}>
+          Sin registros en {MONTHS[selMonth-1]} {selYear}
+        </div>
+      )}
+      {!loading && records.length>0 && (
+        <>
+          <div style={{ maxHeight:300, overflowY:"auto", display:"flex", flexDirection:"column", gap:5, marginBottom:14 }}>
+            {records.map((r,i)=>(
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px",
+                background:i%2===0?"#f8fafc":T.surface, borderRadius:10, border:`1px solid ${T.border}` }}>
+                <span style={{ width:8, height:8, borderRadius:"50%", background:T.green, flexShrink:0 }}/>
+                <div style={{ flex:1 }}>
+                  <div style={{ color:T.text, fontSize:12, fontWeight:600 }}>{fmtDate(r.date)}</div>
+                  <div style={{ color:T.text3, fontSize:11 }}>
+                    ▶ {fmt12h(r.attended_at)} {r.exit_at?`↩ ${fmt12h(r.exit_at)}`:"· Aún dentro"}
+                  </div>
+                </div>
+                {r.exit_at && (
+                  <span style={{ color:T.text2, fontSize:11, fontFamily:"'DM Mono',monospace" }}>
+                    {Math.round((new Date(r.exit_at)-new Date(r.attended_at))/60000)} min
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          <button onClick={downloadPDF} style={{
+            width:"100%", padding:"11px", borderRadius:12, border:"none", cursor:"pointer",
+            background:"linear-gradient(135deg,#059669,#34d399)", color:"#fff",
+            fontFamily:"inherit", fontSize:13, fontWeight:700,
+            boxShadow:"0 4px 14px rgba(5,150,105,0.3)",
+          }}>📄 Exportar PDF</button>
         </>
       )}
     </Modal>
@@ -600,9 +821,9 @@ function AlertListModal({ title, members, color, icon, type, onClose, onSelectMe
   const waMsg = (m)=>{
     const n=m.name.split(" ")[0], f=fmtDate(m.expires_at), dias=diffDays(m.expires_at);
     const pm={Mensual:{renovar:"para no perder continuidad"},Bimensual:{renovar:"para no perder continuidad"},Quincenal:{renovar:"a tiempo para seguir entrenando"},Semanal:{renovar:"a tiempo para seguir entrenando esta semana"},"Día":{renovar:"cuando quieras"}}[m.plan]||{renovar:"a tiempo"};
-    if(type==="overdue") return encodeURIComponent(`Hola ${n}!\n\nTe recordamos que tu membresia *${m.plan}* vencio el *${f}*.\n\nPara seguir disfrutando del gimnasio, podes renovarla ${pm.renovar}.\n\n_GymOS_`);
-    if(type==="today")   return encodeURIComponent(`Hola ${n}!\n\nTu membresia *${m.plan}* vence *HOY*.\n\nAcercate al gimnasio para renovarla y no perder acceso.\n\n_GymOS_`);
-    return encodeURIComponent(`Hola ${n}!\n\nTe avisamos que tu membresia *${m.plan}* vence el *${f}* (en *${dias} dia${dias!==1?"s":""}*).\n\nRenovala ${pm.renovar}.\n\n_GymOS_`);
+    if(type==="overdue") return encodeURIComponent(`Hola ${n}!\n\nTe recordamos que tu membresia *${m.plan}* vencio el *${f}*.\n\nPara seguir disfrutando del gimnasio, podes renovarla ${pm.renovar}.\n\n_GymTactik_`);
+    if(type==="today")   return encodeURIComponent(`Hola ${n}!\n\nTu membresia *${m.plan}* vence *HOY*.\n\nAcercate al gimnasio para renovarla y no perder acceso.\n\n_GymTactik_`);
+    return encodeURIComponent(`Hola ${n}!\n\nTe avisamos que tu membresia *${m.plan}* vence el *${f}* (en *${dias} dia${dias!==1?"s":""}*).\n\nRenovala ${pm.renovar}.\n\n_GymTactik_`);
   };
   const sendOne=(m)=>{ window.open(`https://wa.me/506${cleanPhone(m.phone)}?text=${waMsg(m)}`,"_blank"); setNotified(prev=>({...prev,[m.id]:true})); };
   const pendientes=members.filter(m=>!notified[m.id]);
@@ -909,6 +1130,8 @@ export default function Dashboard() {
   const [editPayment, setEditPayment] = useState(null);
   const [overdueOpen, setOverdueOpen] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [memberPaymentHistory, setMemberPaymentHistory]       = useState(null);
+  const [memberAttendanceHistory, setMemberAttendanceHistory] = useState(null);
 
   const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
 
@@ -1046,7 +1269,7 @@ export default function Dashboard() {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
         {[
           { icon:"👥", label:"Miembros Activos", val:activeCount,          color:T.accent, bg:T.accentBg },
-          { icon:"📋", label:"Asistencia Hoy",   val:attendance.filter(a=>a.type!=="denied").length, color:T.blue,   bg:T.blueBg },
+          { icon:"📋", label:"Asistencia Hoy",   val:attendance.filter(a=>a.type!=="denied").length, color:T.blue, bg:T.blueBg },
           { icon:"💰", label:"Ingresos Hoy",     val:fmtMoney(todayTotal), color:T.green,  bg:T.greenBg },
           { icon:"🚫", label:"Bloqueados",        val:blockedCount,         color:T.red,    bg:T.redBg },
         ].map(s=>(
@@ -1293,6 +1516,27 @@ export default function Dashboard() {
         </div>
         {m.notes&&<div style={{ background:T.yellowBg, border:`1px solid #fde68a`, borderRadius:10, padding:"10px 14px", marginBottom:12, color:T.yellow, fontSize:12 }}>📝 {m.notes}</div>}
         {m.blocked&&<div style={{ background:T.redBg, border:`1px solid #fca5a5`, borderRadius:10, padding:"10px 14px", marginBottom:12, color:T.red, fontSize:12 }}>🚫 {m.blacklist_reason}</div>}
+
+        {/* Historial */}
+        <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+          <button onClick={()=>setMemberPaymentHistory(m)} style={{
+            flex:1, padding:"10px", borderRadius:12, border:`1.5px solid ${T.border}`,
+            background:T.surface, color:T.accent, fontFamily:"inherit",
+            fontSize:11, fontWeight:700, cursor:"pointer", transition:"all 0.15s" }}
+            onMouseEnter={e=>{ e.currentTarget.style.background=T.accentBg; e.currentTarget.style.borderColor=T.accent; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background=T.surface; e.currentTarget.style.borderColor=T.border; }}>
+            💳 Historial de Pagos
+          </button>
+          <button onClick={()=>setMemberAttendanceHistory(m)} style={{
+            flex:1, padding:"10px", borderRadius:12, border:`1.5px solid ${T.border}`,
+            background:T.surface, color:T.green, fontFamily:"inherit",
+            fontSize:11, fontWeight:700, cursor:"pointer", transition:"all 0.15s" }}
+            onMouseEnter={e=>{ e.currentTarget.style.background=T.greenBg; e.currentTarget.style.borderColor=T.green; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background=T.surface; e.currentTarget.style.borderColor=T.border; }}>
+            📋 Historial de Asistencia
+          </button>
+        </div>
+
         <div style={{ display:"flex", gap:8, marginBottom:8 }}>
           <Btn variant="ghost" onClick={()=>toggleBlock(m)} style={{ flex:1, fontSize:11 }}>{m.blocked?"✓ Desbloquear":"🚫 Bloquear"}</Btn>
           <Btn variant="ghost" onClick={()=>{ setEditMember(m); setSelectedMember(null); }} style={{ flex:1, fontSize:11 }}>✏️ Editar</Btn>
@@ -1345,13 +1589,12 @@ export default function Dashboard() {
           borderRight:`1px solid ${T.border}`, display:"flex", flexDirection:"column",
           zIndex:100, boxShadow:"2px 0 16px rgba(99,102,241,0.08)" }}>
 
-          <div style={{ padding:"22px 20px 18px", borderBottom:`1px solid ${T.border}` }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2, width:"100%" }}>
-  <img src="/img/completo_sin.png" alt="GymTactik"
-    style={{ height:80, maxWidth:160, objectFit:"contain" }}/>
-  <div style={{ fontSize:10, color:T.text3, fontWeight:500 }}>{user?.gym?.name}</div>
-</div>
+          <div style={{ padding:"14px 20px", height:80, borderBottom:`1px solid ${T.border}`,
+            display:"flex", alignItems:"center" }}>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2, width:"100%" }}>
+              <img src="/img/completo_sin.png" alt="GymTactik"
+                style={{ height:40, maxWidth:160, objectFit:"contain" }}/>
+              <div style={{ fontSize:10, color:T.text3, fontWeight:500 }}>{user?.gym?.name}</div>
             </div>
           </div>
 
@@ -1447,6 +1690,8 @@ export default function Dashboard() {
         {selectedMember&&!editMember&&renderMemberDetail()}
         {alertModal&&<AlertListModal {...alertModal} onClose={()=>setAlertModal(null)} onSelectMember={m=>setSelectedMember(m)}/>}
         {showChangePassword&&<ChangePasswordModal onClose={()=>setShowChangePassword(false)}/>}
+        {memberPaymentHistory&&<MemberPaymentHistoryModal member={memberPaymentHistory} onClose={()=>setMemberPaymentHistory(null)}/>}
+        {memberAttendanceHistory&&<MemberAttendanceHistoryModal member={memberAttendanceHistory} onClose={()=>setMemberAttendanceHistory(null)}/>}
 
         {toast&&(
           <div style={{ position:"fixed", bottom:24, right:24,
