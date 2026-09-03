@@ -31,29 +31,15 @@ const initials  = (name="?") => name.split(" ").map(w=>w[0]).join("").slice(0,2)
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const T = {
-  bg:"#f0f4ff",
-  bg2:"#fafbff",
-  surface:"#ffffff",
-  border:"#e2e8f0",
-  border2:"#cbd5e1",
-  text:"#0f172a",
-  text2:"#475569",
-  text3:"#94a3b8",
-  sidebar:"#ffffff",
-  sidebarBorder:"#e2e8f0",
-  accent:"#6366f1",
-  accentBg:"#eef2ff",
-  accentLight:"#f5f3ff",
-  green:"#059669",
-  greenBg:"#d1fae5",
-  orange:"#ea580c",
-  orangeBg:"#ffedd5",
-  red:"#dc2626",
-  redBg:"#fee2e2",
-  blue:"#0891b2",
-  blueBg:"#e0f2fe",
-  yellow:"#d97706",
-  yellowBg:"#fef3c7",
+  bg:"#f0f4ff", bg2:"#fafbff", surface:"#ffffff",
+  border:"#e2e8f0", border2:"#cbd5e1",
+  text:"#0f172a", text2:"#475569", text3:"#94a3b8",
+  accent:"#6366f1", accentBg:"#eef2ff",
+  green:"#059669", greenBg:"#d1fae5",
+  orange:"#ea580c", orangeBg:"#ffedd5",
+  red:"#dc2626", redBg:"#fee2e2",
+  blue:"#0891b2", blueBg:"#e0f2fe",
+  yellow:"#d97706", yellowBg:"#fef3c7",
 };
 
 const PLAN_META = {
@@ -114,8 +100,7 @@ const Modal = ({ title, onClose, children, width=460 }) => (
         <h3 style={{ color:T.text, fontSize:17, fontWeight:800, margin:0 }}>{title}</h3>
         <button onClick={onClose} style={{ background:"#f1f5f9", border:"none", color:T.text2,
           width:32, height:32, borderRadius:10, fontSize:18, cursor:"pointer",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          transition:"background 0.15s" }}>×</button>
+          display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
       </div>
       {children}
     </div>
@@ -137,14 +122,13 @@ const Btn = ({ children, variant="primary", ...props }) => {
     green:  { bg:"linear-gradient(135deg,#059669,#34d399)",  c:"#fff", b:"none", shadow:"0 4px 14px rgba(5,150,105,0.3)" },
     red:    { bg:"linear-gradient(135deg,#dc2626,#ef4444)",  c:"#fff", b:"none", shadow:"0 4px 14px rgba(220,38,38,0.3)" },
     ghost:  { bg:"#f8fafc", c:T.text2, b:`1.5px solid ${T.border}`, shadow:"none" },
-  }[variant]||{ bg:"linear-gradient(135deg,#6366f1,#818cf8)", c:"#fff", b:"none" };
+  }[variant]||{ bg:"linear-gradient(135deg,#6366f1,#818cf8)", c:"#fff", b:"none", shadow:"none" };
   return (
     <button {...props} style={{
       padding:"10px 18px", borderRadius:12, fontSize:13, fontWeight:700,
       background:s.bg, color:s.c, border:s.b, cursor:props.disabled?"not-allowed":"pointer",
       opacity:props.disabled?0.5:1, fontFamily:"inherit", boxShadow:s.shadow,
-      transition:"transform 0.12s, box-shadow 0.12s",
-      ...props.style }}>{children}</button>
+      transition:"transform 0.12s, box-shadow 0.12s", ...props.style }}>{children}</button>
   );
 };
 const ErrBox = ({ msg }) => !msg ? null : (
@@ -169,9 +153,7 @@ function MemberSearch({ members, onSelect, placeholder="Nombre o cédula..." }) 
     <div ref={ref} style={{ position:"relative", marginBottom:14 }}>
       <input placeholder={placeholder} value={query}
         onChange={e=>{ setQuery(e.target.value); onSelect(null); setShow(true); }}
-        onFocus={()=>setShow(true)}
-        style={{ ...iStyle, marginBottom:0 }}
-        onFocus2={e=>e.target.style.borderColor=T.accent}/>
+        onFocus={()=>setShow(true)} style={{ ...iStyle, marginBottom:0 }}/>
       {show && sug.length>0 && (
         <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0,
           background:T.surface, border:`1.5px solid ${T.border}`, borderRadius:16,
@@ -179,8 +161,7 @@ function MemberSearch({ members, onSelect, placeholder="Nombre o cédula..." }) 
           {sug.map(s=>(
             <div key={s.id} onClick={()=>{ onSelect(s); setQuery(s.name); setShow(false); }}
               style={{ display:"flex", alignItems:"center", gap:10, padding:"11px 14px",
-                cursor:"pointer", borderBottom:`1px solid ${T.border}`,
-                transition:"background 0.12s" }}
+                cursor:"pointer", borderBottom:`1px solid ${T.border}`, transition:"background 0.12s" }}
               onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"}
               onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
               <Avatar name={s.name} size={32}/>
@@ -196,11 +177,149 @@ function MemberSearch({ members, onSelect, placeholder="Nombre o cédula..." }) 
       {show && query.length>=1 && sug.length===0 && (
         <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0,
           background:T.surface, border:`1.5px solid ${T.border}`, borderRadius:16,
-          zIndex:300, padding:14, textAlign:"center", color:T.text3, fontSize:13 }}>
-          Sin resultados
-        </div>
+          zIndex:300, padding:14, textAlign:"center", color:T.text3, fontSize:13 }}>Sin resultados</div>
       )}
     </div>
+  );
+}
+
+// ─── CHANGE PASSWORD MODAL ────────────────────────────────────────────────────
+function ChangePasswordModal({ onClose }) {
+  const [current, setCurrent]         = useState("");
+  const [newPass, setNewPass]         = useState("");
+  const [confirm, setConfirm]         = useState("");
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState("");
+  const [success, setSuccess]         = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew]         = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const strength = !newPass ? 0
+    : newPass.length < 6 ? 1
+    : newPass.length < 10 && !/[^a-zA-Z0-9]/.test(newPass) ? 2
+    : newPass.length >= 10 && /[^a-zA-Z0-9]/.test(newPass) ? 4 : 3;
+  const strengthLabel = ["","Muy débil","Débil","Buena","Fuerte"];
+  const strengthColor = ["","#dc2626","#ea580c","#d97706","#059669"];
+
+  const handleSave = async () => {
+    setError("");
+    if (newPass !== confirm) return setError("Las contraseñas nuevas no coinciden");
+    if (newPass.length < 6)  return setError("La contraseña debe tener al menos 6 caracteres");
+    if (newPass === current)  return setError("La nueva contraseña debe ser diferente a la actual");
+    setLoading(true);
+    try {
+      await api.put("/auth/password", { currentPassword:current, newPassword:newPass });
+      setSuccess(true);
+    } catch(e) {
+      setError(e.response?.data?.error || "Error al cambiar contraseña");
+    } finally { setLoading(false); }
+  };
+
+  const passInputStyle = (val, matchVal=null) => ({
+    ...iStyle, marginBottom:0, paddingRight:46,
+    ...(val ? {
+      border:`2px solid ${matchVal!==null ? (val===matchVal?"#059669":"#dc2626") : (strengthColor[strength]||T.border)}`,
+      boxShadow:`0 0 0 3px ${matchVal!==null ? (val===matchVal?"#05966922":"#dc262622") : (strengthColor[strength]+"22")}`,
+    } : {}),
+  });
+
+  const ShowBtn = ({ show, onToggle }) => (
+    <button type="button" onClick={onToggle} style={{
+      position:"absolute", right:14, top:"50%", transform:"translateY(-50%)",
+      background:"none", border:"none", cursor:"pointer", fontSize:16,
+      color:"#94a3b8", padding:4, lineHeight:1 }}>
+      {show?"🙈":"👁️"}
+    </button>
+  );
+
+  return (
+    <Modal title="🔒 Cambiar Contraseña" onClose={onClose}>
+      {success ? (
+        <div style={{ textAlign:"center", padding:"20px 0" }}>
+          <div style={{
+            width:88, height:88, borderRadius:"50%",
+            background:"linear-gradient(135deg,#059669,#34d399)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:40, margin:"0 auto 18px",
+            boxShadow:"0 8px 24px rgba(5,150,105,0.3)",
+          }}>✅</div>
+          <div style={{ color:T.green, fontWeight:800, fontSize:18, marginBottom:8 }}>¡Contraseña actualizada!</div>
+          <div style={{ color:T.text2, fontSize:13, marginBottom:24, lineHeight:1.6 }}>
+            Tu contraseña se cambió correctamente.<br/>Usá la nueva contraseña en tu próximo inicio de sesión.
+          </div>
+          <Btn onClick={onClose} style={{ width:"100%" }}>Cerrar</Btn>
+        </div>
+      ) : (
+        <>
+          <ErrBox msg={error}/>
+
+          {/* Contraseña actual */}
+          <Lbl>CONTRASEÑA ACTUAL</Lbl>
+          <div style={{ position:"relative", marginBottom:14 }}>
+            <input type={showCurrent?"text":"password"} value={current}
+              onChange={e=>setCurrent(e.target.value)} placeholder="Tu contraseña actual"
+              style={{ ...iStyle, marginBottom:0, paddingRight:46 }}/>
+            <ShowBtn show={showCurrent} onToggle={()=>setShowCurrent(v=>!v)}/>
+          </div>
+
+          {/* Nueva contraseña */}
+          <Lbl>NUEVA CONTRASEÑA</Lbl>
+          <div style={{ position:"relative", marginBottom:8 }}>
+            <input type={showNew?"text":"password"} value={newPass}
+              onChange={e=>setNewPass(e.target.value)} placeholder="Mínimo 6 caracteres"
+              style={passInputStyle(newPass)}/>
+            <ShowBtn show={showNew} onToggle={()=>setShowNew(v=>!v)}/>
+          </div>
+
+          {/* Barra de fortaleza */}
+          {newPass && (
+            <div style={{ marginBottom:14 }}>
+              <div style={{ display:"flex", gap:4, marginBottom:5 }}>
+                {[1,2,3,4].map(i=>(
+                  <div key={i} style={{ flex:1, height:5, borderRadius:4,
+                    background:i<=strength?strengthColor[strength]:"#e2e8f0",
+                    transition:"background 0.2s" }}/>
+                ))}
+              </div>
+              <div style={{ fontSize:11, color:strengthColor[strength], fontWeight:700 }}>
+                {strengthLabel[strength]} {strength>=3?"✓":""}
+              </div>
+            </div>
+          )}
+
+          {/* Confirmar */}
+          <Lbl>CONFIRMAR NUEVA CONTRASEÑA</Lbl>
+          <div style={{ position:"relative", marginBottom:22 }}>
+            <input type={showConfirm?"text":"password"} value={confirm}
+              onChange={e=>setConfirm(e.target.value)} placeholder="Repetí la nueva contraseña"
+              style={passInputStyle(confirm, newPass)}/>
+            <ShowBtn show={showConfirm} onToggle={()=>setShowConfirm(v=>!v)}/>
+            {confirm && confirm===newPass && (
+              <div style={{ position:"absolute", right:46, top:"50%", transform:"translateY(-50%)",
+                color:T.green, fontSize:16, pointerEvents:"none" }}>✓</div>
+            )}
+          </div>
+
+          <div style={{ background:"#f8fafc", border:`1px solid ${T.border}`, borderRadius:12,
+            padding:"10px 14px", marginBottom:18, display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:16 }}>💡</span>
+            <span style={{ color:T.text2, fontSize:12 }}>
+              Usá una combinación de letras, números y símbolos para una contraseña más segura.
+            </span>
+          </div>
+
+          <div style={{ display:"flex", gap:8 }}>
+            <Btn variant="ghost" onClick={onClose} style={{ flex:1 }}>Cancelar</Btn>
+            <Btn onClick={handleSave}
+              disabled={!current||!newPass||!confirm||loading}
+              style={{ flex:2 }}>
+              {loading?"Guardando...":"🔒 Cambiar Contraseña"}
+            </Btn>
+          </div>
+        </>
+      )}
+    </Modal>
   );
 }
 
@@ -249,8 +368,7 @@ function MemberModal({ member, onClose, onSave }) {
             border:`2px solid ${form.plan===p?(PLAN_META[p]?.color||T.accent):T.border}`,
             background:form.plan===p?(PLAN_META[p]?.bg||T.accentBg):T.surface,
             color:form.plan===p?(PLAN_META[p]?.color||T.accent):T.text2, fontSize:11, fontWeight:700,
-            transition:"all 0.15s",
-          }}>{p}</button>
+            transition:"all 0.15s" }}>{p}</button>
         ))}
       </div>
       <Lbl>GRUPO FAMILIAR</Lbl>
@@ -278,9 +396,7 @@ function PaymentModal({ members, onClose, onSave }) {
   const [error, setError] = useState("");
   const SUGGESTED = { "Día":1000, Semanal:5000, Quincenal:7500, Mensual:15000, Bimensual:28000 };
   const handleSelect = (m)=>{ setSelMember(m); if(m) setAmount(String(SUGGESTED[m.plan]||"")); };
-  const raw = parseInt(amount)||0;
-  const disc = Math.round(raw*discount/100);
-  const final = raw-disc;
+  const raw=parseInt(amount)||0, disc=Math.round(raw*discount/100), final=raw-disc;
   const canPay = raw>0 && (visitorMode || (selMember && !selMember.blocked));
   const handlePay = async()=>{
     setLoading(true); setError("");
@@ -342,8 +458,9 @@ function PaymentModal({ members, onClose, onSave }) {
             flex:1, padding:"12px", borderRadius:12, cursor:"pointer", fontFamily:"inherit",
             border:`2px solid ${method===m?T.accent:T.border}`,
             background:method===m?T.accentBg:T.surface,
-            color:method===m?T.accent:T.text2, fontSize:13, fontWeight:700, transition:"all 0.15s",
-          }}>{m==="SINPE"?"📱 SINPE":"💵 Efectivo"}</button>
+            color:method===m?T.accent:T.text2, fontSize:13, fontWeight:700, transition:"all 0.15s" }}>
+            {m==="SINPE"?"📱 SINPE":"💵 Efectivo"}
+          </button>
         ))}
       </div>
       {!visitorMode && (
@@ -355,15 +472,13 @@ function PaymentModal({ members, onClose, onSave }) {
                 flex:1, padding:"9px 4px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
                 border:`2px solid ${discount===d?T.blue:T.border}`,
                 background:discount===d?T.blueBg:T.surface,
-                color:discount===d?T.blue:T.text3, fontSize:11, fontWeight:700, transition:"all 0.15s",
-              }}>{d}%</button>
+                color:discount===d?T.blue:T.text3, fontSize:11, fontWeight:700, transition:"all 0.15s" }}>{d}%</button>
             ))}
           </div>
         </>
       )}
       {raw>0 && (
-        <div style={{ background:"#f8fafc", border:`1px solid ${T.border}`, borderRadius:12,
-          padding:"14px 16px", marginBottom:16 }}>
+        <div style={{ background:"#f8fafc", border:`1px solid ${T.border}`, borderRadius:12, padding:"14px 16px", marginBottom:16 }}>
           {disc>0 && <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
             <span style={{ color:T.text2, fontSize:12 }}>Descuento ({discount}%)</span>
             <span style={{ color:T.red, fontSize:12 }}>-{fmtMoney(disc)}</span>
@@ -795,22 +910,23 @@ const NAV = [
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { user, logout } = useAuth();
-  const [tab, setTab]           = useState("dashboard");
-  const [members, setMembers]   = useState([]);
+  const [tab, setTab]               = useState("dashboard");
+  const [members, setMembers]       = useState([]);
   const [attendance, setAttendance] = useState([]);
-  const [payments, setPayments] = useState([]);
-  const [alerts, setAlerts]     = useState({ overdue:[], expiringToday:[], expiringSoon:[] });
-  const [modal, setModal]       = useState(null);
+  const [payments, setPayments]     = useState([]);
+  const [alerts, setAlerts]         = useState({ overdue:[], expiringToday:[], expiringSoon:[] });
+  const [modal, setModal]           = useState(null);
   const [selectedMember, setSelectedMember] = useState(null);
   const [editMember, setEditMember] = useState(null);
   const [alertModal, setAlertModal] = useState(null);
-  const [search, setSearch]     = useState("");
+  const [search, setSearch]         = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPlan, setFilterPlan]     = useState("all");
-  const [toast, setToast]       = useState(null);
+  const [toast, setToast]           = useState(null);
   const [loadingData, setLoadingData] = useState(false);
   const [editPayment, setEditPayment] = useState(null);
   const [overdueOpen, setOverdueOpen] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
 
@@ -895,7 +1011,6 @@ export default function Dashboard() {
   // ── RENDERS ──────────────────────────────────────────────────────────────
   const renderDashboard = ()=>(
     <div>
-      {/* Alertas */}
       {(alerts.expiringToday?.length>0||alerts.expiringSoon?.length>0||alerts.overdue?.length>0)&&(
         <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:20 }}>
           {alerts.expiringToday?.length>0&&(
@@ -946,27 +1061,22 @@ export default function Dashboard() {
           )}
         </div>
       )}
-
-      {/* Stats */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
         {[
           { icon:"👥", label:"Miembros Activos", val:activeCount,          color:T.accent, bg:T.accentBg },
-          { icon:"📋", label:"Asistencia Hoy",   val:attendance.filter(a=>a.type!=="denied").length, color:T.blue,   bg:T.blueBg },
+          { icon:"📋", label:"Asistencia Hoy",   val:attendance.filter(a=>a.type!=="denied").length, color:T.blue, bg:T.blueBg },
           { icon:"💰", label:"Ingresos Hoy",     val:fmtMoney(todayTotal), color:T.green,  bg:T.greenBg },
           { icon:"🚫", label:"Bloqueados",        val:blockedCount,         color:T.red,    bg:T.redBg },
         ].map(s=>(
           <Card key={s.label} style={{ padding:"20px" }}>
             <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
-              <div style={{ width:36, height:36, borderRadius:10, background:s.bg,
-                display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>{s.icon}</div>
+              <div style={{ width:36, height:36, borderRadius:10, background:s.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>{s.icon}</div>
               <span style={{ fontSize:11, color:T.text2, fontWeight:600 }}>{s.label}</span>
             </div>
-            <div style={{ fontSize:typeof s.val==="string"&&s.val.length>8?16:30,
-              fontWeight:900, color:T.text, fontFamily:"'DM Mono',monospace", letterSpacing:"-1px" }}>{s.val}</div>
+            <div style={{ fontSize:typeof s.val==="string"&&s.val.length>8?16:30, fontWeight:900, color:T.text, fontFamily:"'DM Mono',monospace", letterSpacing:"-1px" }}>{s.val}</div>
           </Card>
         ))}
       </div>
-
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
         <Card>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
@@ -975,9 +1085,7 @@ export default function Dashboard() {
           </div>
           {attendance.length===0&&<div style={{ color:T.text3, fontSize:12, textAlign:"center", padding:20 }}>Sin registros aún</div>}
           {[...attendance].reverse().slice(0,6).map((a,i)=>(
-            <div key={i} style={{ display:"flex", alignItems:"center", gap:9, padding:"9px 12px",
-              background:a.type==="denied"?"#fff5f5":"#f8fafc", borderRadius:10, marginBottom:5,
-              border:`1px solid ${a.type==="denied"?"#fecaca":T.border}` }}>
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:9, padding:"9px 12px", background:a.type==="denied"?"#fff5f5":"#f8fafc", borderRadius:10, marginBottom:5, border:`1px solid ${a.type==="denied"?"#fecaca":T.border}` }}>
               <Avatar name={a.member_name} size={30}/>
               <div style={{ flex:1 }}>
                 <div style={{ color:a.type==="denied"?T.red:T.text, fontSize:12, fontWeight:600 }}>{a.member_name}</div>
@@ -1020,15 +1128,10 @@ export default function Dashboard() {
     <div>
       <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
         <input placeholder="🔍  Nombre, cédula o teléfono..." value={search} onChange={e=>setSearch(e.target.value)}
-          style={{ flex:1, minWidth:180, background:T.surface, border:`2px solid ${T.border}`, borderRadius:12,
-            padding:"10px 14px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit",
-            transition:"border-color 0.2s" }}/>
+          style={{ flex:1, minWidth:180, background:T.surface, border:`2px solid ${T.border}`, borderRadius:12, padding:"10px 14px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}/>
         {["all","active","overdue","inactive","blocked"].map(s=>(
-          <button key={s} onClick={()=>setFilterStatus(s)} style={{ padding:"8px 14px", borderRadius:10, fontSize:11, fontWeight:700,
-            cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s",
-            border:`2px solid ${filterStatus===s?T.accent:T.border}`,
-            background:filterStatus===s?T.accentBg:T.surface,
-            color:filterStatus===s?T.accent:T.text2 }}>
+          <button key={s} onClick={()=>setFilterStatus(s)} style={{ padding:"8px 14px", borderRadius:10, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s",
+            border:`2px solid ${filterStatus===s?T.accent:T.border}`, background:filterStatus===s?T.accentBg:T.surface, color:filterStatus===s?T.accent:T.text2 }}>
             {{all:"Todos",active:"Activos",overdue:"Vencidos",inactive:"Inactivos",blocked:"Bloqueados"}[s]}
           </button>
         ))}
@@ -1041,11 +1144,9 @@ export default function Dashboard() {
       <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
         {members.map(m=>{ const days=diffDays(m.expires_at); return (
           <div key={m.id} onClick={()=>setSelectedMember(m)} style={{
-            background:T.surface, borderRadius:16, padding:"14px 18px",
-            display:"flex", alignItems:"center", gap:14, cursor:"pointer",
+            background:T.surface, borderRadius:16, padding:"14px 18px", display:"flex", alignItems:"center", gap:14, cursor:"pointer",
             border:`1.5px solid ${m.blocked?"#fca5a5":days<=3&&days>0?"#fed7aa":T.border}`,
-            boxShadow:"0 1px 4px rgba(0,0,0,0.04)",
-            transition:"box-shadow 0.15s, transform 0.15s" }}
+            boxShadow:"0 1px 4px rgba(0,0,0,0.04)", transition:"box-shadow 0.15s, transform 0.15s" }}
             onMouseEnter={e=>{ e.currentTarget.style.boxShadow="0 6px 20px rgba(99,102,241,0.12)"; e.currentTarget.style.transform="translateY(-1px)"; }}
             onMouseLeave={e=>{ e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.transform="translateY(0)"; }}>
             <Avatar name={m.name} size={44}/>
@@ -1054,9 +1155,7 @@ export default function Dashboard() {
               <div style={{ color:T.text3, fontSize:12 }}>CI: {m.cedula} · {m.phone}</div>
             </div>
             <PlanTag plan={m.plan}/><StatusBadge status={m.status} blocked={m.blocked}/>
-            <div style={{ width:32, height:32, borderRadius:10, flexShrink:0, fontSize:14,
-              background:days<=0?T.redBg:days<=3?T.orangeBg:T.greenBg,
-              display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div style={{ width:32, height:32, borderRadius:10, flexShrink:0, fontSize:14, background:days<=0?T.redBg:days<=3?T.orangeBg:T.greenBg, display:"flex", alignItems:"center", justifyContent:"center" }}>
               {days<=0?"⚠️":days<=3?"⏰":"✓"}
             </div>
           </div>
@@ -1087,11 +1186,8 @@ export default function Dashboard() {
         {attendance.length===0&&<div style={{ color:T.text3, fontSize:12, textAlign:"center", padding:30 }}>Sin entradas aún</div>}
         <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
           {[...attendance].reverse().map((a,i)=>(
-            <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"11px 14px",
-              background:a.type==="denied"?"#fff5f5":"#f8fafc", borderRadius:12,
-              border:`1px solid ${a.type==="denied"?"#fecaca":a.exit_at?T.border:"#bbf7d0"}` }}>
-              <span style={{ width:9, height:9, borderRadius:"50%", flexShrink:0,
-                background:a.type==="denied"?T.red:a.exit_at?T.text3:T.green }}/>
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"11px 14px", background:a.type==="denied"?"#fff5f5":"#f8fafc", borderRadius:12, border:`1px solid ${a.type==="denied"?"#fecaca":a.exit_at?T.border:"#bbf7d0"}` }}>
+              <span style={{ width:9, height:9, borderRadius:"50%", flexShrink:0, background:a.type==="denied"?T.red:a.exit_at?T.text3:T.green }}/>
               <Avatar name={a.member_name} size={34}/>
               <div style={{ flex:1 }}>
                 <span style={{ color:T.text, fontSize:13, fontWeight:600 }}>{a.member_name}</span>
@@ -1107,8 +1203,7 @@ export default function Dashboard() {
                     {a.exit_at
                       ? <span style={{ fontSize:10, color:T.text3, background:"#f1f5f9", padding:"3px 9px", borderRadius:10, flexShrink:0 }}>Salió</span>
                       : <button onClick={async()=>{ await api.patch(`/attendance/${a.id}/exit`); await loadAttendance(); showToast(`↩ Salida: ${a.member_name}`); }}
-                          style={{ flexShrink:0, padding:"4px 12px", borderRadius:8, border:`1.5px solid ${T.orange}`,
-                            background:T.orangeBg, color:T.orange, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                          style={{ flexShrink:0, padding:"4px 12px", borderRadius:8, border:`1.5px solid ${T.orange}`, background:T.orangeBg, color:T.orange, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
                           ↩ Salida
                         </button>}
                   </>
@@ -1124,8 +1219,8 @@ export default function Dashboard() {
     <div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:16 }}>
         {[
-          { label:"Total hoy", val:fmtMoney(todayTotal), color:T.green },
-          { label:"📱 SINPE",  val:fmtMoney(todaySINPE), color:T.accent },
+          { label:"Total hoy",  val:fmtMoney(todayTotal),    color:T.green },
+          { label:"📱 SINPE",   val:fmtMoney(todaySINPE),    color:T.accent },
           { label:"💵 Efectivo",val:fmtMoney(todayEfectivo), color:T.yellow },
         ].map(s=>(
           <Card key={s.label} style={{ textAlign:"center", padding:16 }}>
@@ -1142,8 +1237,7 @@ export default function Dashboard() {
         {payments.length===0&&<div style={{ color:T.text3, textAlign:"center", padding:30 }}>Sin pagos este mes</div>}
         <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
           {payments.map((p,i)=>(
-            <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px",
-              background:"#f8fafc", borderRadius:12, border:`1px solid ${T.border}` }}>
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background:"#f8fafc", borderRadius:12, border:`1px solid ${T.border}` }}>
               <span style={{ fontSize:18 }}>{p.method==="SINPE"?"📱":"💵"}</span>
               <div style={{ flex:1 }}>
                 <div style={{ color:T.text, fontSize:13, fontWeight:600 }}>{p.member_name}</div>
@@ -1153,12 +1247,8 @@ export default function Dashboard() {
               {p.discount>0&&<span style={{ color:T.red, fontSize:10 }}>-{p.discount}%</span>}
               <span style={{ color:T.green, fontWeight:800, fontSize:14, fontFamily:"'DM Mono',monospace" }}>{fmtMoney(p.amount)}</span>
               <div style={{ display:"flex", gap:5, flexShrink:0 }}>
-                <button onClick={()=>setEditPayment(p)} style={{ padding:"4px 10px", borderRadius:8,
-                  border:`1px solid ${T.border}`, background:T.surface, color:T.text2,
-                  fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>✏️</button>
-                <button onClick={()=>deletePayment(p)} style={{ padding:"4px 10px", borderRadius:8,
-                  border:`1px solid #fca5a5`, background:T.redBg, color:T.red,
-                  fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>🗑️</button>
+                <button onClick={()=>setEditPayment(p)} style={{ padding:"4px 10px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, color:T.text2, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>✏️</button>
+                <button onClick={()=>deletePayment(p)} style={{ padding:"4px 10px", borderRadius:8, border:`1px solid #fca5a5`, background:T.redBg, color:T.red, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>🗑️</button>
               </div>
             </div>
           ))}
@@ -1171,8 +1261,7 @@ export default function Dashboard() {
     const blocked=members.filter(m=>m.blocked);
     return (
       <div>
-        <div style={{ background:T.redBg, border:`1.5px solid #fca5a5`, borderRadius:16,
-          padding:"16px 20px", marginBottom:16, display:"flex", alignItems:"center", gap:12 }}>
+        <div style={{ background:T.redBg, border:`1.5px solid #fca5a5`, borderRadius:16, padding:"16px 20px", marginBottom:16, display:"flex", alignItems:"center", gap:12 }}>
           <span style={{ fontSize:28 }}>🚫</span>
           <div>
             <div style={{ color:T.red, fontWeight:700, fontSize:14 }}>{blocked.length} bloqueado{blocked.length!==1?"s":""}</div>
@@ -1181,8 +1270,7 @@ export default function Dashboard() {
         </div>
         {blocked.length===0&&<div style={{ color:T.text3, textAlign:"center", padding:60 }}>No hay miembros bloqueados</div>}
         {blocked.map(m=>(
-          <div key={m.id} style={{ background:T.surface, border:`1.5px solid #fca5a5`, borderRadius:16,
-            padding:"14px 18px", marginBottom:8, boxShadow:"0 2px 8px rgba(220,38,38,0.08)" }}>
+          <div key={m.id} style={{ background:T.surface, border:`1.5px solid #fca5a5`, borderRadius:16, padding:"14px 18px", marginBottom:8, boxShadow:"0 2px 8px rgba(220,38,38,0.08)" }}>
             <div style={{ display:"flex", alignItems:"center", gap:13, marginBottom:10 }}>
               <Avatar name={m.name} size={42}/>
               <div style={{ flex:1 }}>
@@ -1205,8 +1293,7 @@ export default function Dashboard() {
     const m=selectedMember, days=diffDays(m.expires_at);
     return (
       <Modal title="Perfil del Miembro" onClose={()=>setSelectedMember(null)} width={500}>
-        <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:20, padding:18,
-          background:"#f8fafc", border:`1px solid ${T.border}`, borderRadius:16 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:20, padding:18, background:"#f8fafc", border:`1px solid ${T.border}`, borderRadius:16 }}>
           <Avatar name={m.name} size={56}/>
           <div style={{ flex:1 }}>
             <div style={{ color:T.text, fontWeight:800, fontSize:17 }}>{m.name}</div>
@@ -1232,8 +1319,7 @@ export default function Dashboard() {
           if(!window.confirm(`¿Eliminar a ${m.name}? Esta acción no se puede deshacer.`)) return;
           try { await api.delete(`/members/${m.id}`); showToast(`🗑️ ${m.name} eliminado`); setSelectedMember(null); loadMembers(); loadAlerts(); }
           catch(e){ showToast("❌ "+(e.response?.data?.error||"Error"),"err"); }
-        }} style={{ width:"100%", padding:"10px", borderRadius:12, border:`1.5px solid #fca5a5`,
-          background:T.redBg, color:T.red, fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+        }} style={{ width:"100%", padding:"10px", borderRadius:12, border:`1.5px solid #fca5a5`, background:T.redBg, color:T.red, fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer" }}>
           🗑️ Eliminar miembro
         </button>
       </Modal>
@@ -1248,7 +1334,7 @@ export default function Dashboard() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@500;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}
-        body{background:${T.bg};}
+        body{background:#f0f4ff;}
         ::-webkit-scrollbar{width:5px;}
         ::-webkit-scrollbar-track{background:#f1f5f9;}
         ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px;}
@@ -1256,20 +1342,17 @@ export default function Dashboard() {
         input[type=number]::-webkit-outer-spin-button,
         input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         @keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
       `}</style>
 
-      <div style={{ minHeight:"100vh", background:`linear-gradient(135deg, #f0f4ff 0%, #fafbff 60%, #f0f9ff 100%)`,
+      <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#f0f4ff 0%,#fafbff 60%,#f0f9ff 100%)",
         fontFamily:"'DM Sans',sans-serif", color:T.text, display:"flex" }}>
 
-        {/* ── SIDEBAR ────────────────────────────────────────────────────── */}
+        {/* ── SIDEBAR ──────────────────────────────────────────────────── */}
         <div style={{ position:"fixed", top:0, left:0, bottom:0, width:220,
           background:"rgba(255,255,255,0.9)", backdropFilter:"blur(20px)",
-          borderRight:`1px solid ${T.border}`,
-          display:"flex", flexDirection:"column", zIndex:100,
-          boxShadow:"2px 0 16px rgba(99,102,241,0.08)" }}>
+          borderRight:`1px solid ${T.border}`, display:"flex", flexDirection:"column",
+          zIndex:100, boxShadow:"2px 0 16px rgba(99,102,241,0.08)" }}>
 
-          {/* Logo */}
           <div style={{ padding:"22px 20px 18px", borderBottom:`1px solid ${T.border}` }}>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
               <div style={{ width:40, height:40, borderRadius:12,
@@ -1283,7 +1366,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Nav */}
           <nav style={{ padding:"10px 10px", flex:1 }}>
             {NAV.map(item=>(
               <button key={item.id} onClick={()=>setTab(item.id)} style={{
@@ -1292,21 +1374,17 @@ export default function Dashboard() {
                 border:"none", cursor:"pointer", textAlign:"left", fontFamily:"inherit",
                 fontSize:13, fontWeight:tab===item.id?700:500,
                 background:tab===item.id?T.accentBg:"transparent",
-                color:tab===item.id?T.accent:T.text2,
-                transition:"all 0.15s" }}>
+                color:tab===item.id?T.accent:T.text2, transition:"all 0.15s" }}>
                 <span>{item.icon}</span><span>{item.label}</span>
                 {item.id==="blacklist"&&blockedCount>0&&(
-                  <span style={{ marginLeft:"auto", background:T.red, color:"#fff",
-                    borderRadius:20, padding:"1px 7px", fontSize:10, fontWeight:800 }}>{blockedCount}</span>
+                  <span style={{ marginLeft:"auto", background:T.red, color:"#fff", borderRadius:20, padding:"1px 7px", fontSize:10, fontWeight:800 }}>{blockedCount}</span>
                 )}
               </button>
             ))}
           </nav>
 
-          {/* Acciones rápidas */}
           <div style={{ padding:"10px 10px 20px", borderTop:`1px solid ${T.border}` }}>
-            <div style={{ fontSize:10, color:T.text3, fontWeight:700, letterSpacing:"1px",
-              padding:"0 12px", marginBottom:8 }}>ACCIONES RÁPIDAS</div>
+            <div style={{ fontSize:10, color:T.text3, fontWeight:700, letterSpacing:"1px", padding:"0 12px", marginBottom:8 }}>ACCIONES RÁPIDAS</div>
             {[
               { icon:"👤", label:"Nuevo Miembro",    action:"member",     color:T.accent },
               { icon:"📋", label:"Marcar Asistencia",action:"attendance", color:T.blue },
@@ -1317,30 +1395,42 @@ export default function Dashboard() {
                 width:"100%", display:"flex", alignItems:"center", gap:9,
                 padding:"9px 12px", borderRadius:10, marginBottom:2,
                 border:"none", cursor:"pointer", textAlign:"left",
-                background:"transparent", color:a.color,
-                fontWeight:600, fontSize:12, fontFamily:"inherit",
+                background:"transparent", color:a.color, fontWeight:600, fontSize:12, fontFamily:"inherit",
                 transition:"background 0.15s" }}
                 onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"}
                 onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                 <span>{a.icon}</span><span>{a.label}</span>
               </button>
             ))}
-            <button onClick={logout} style={{ width:"100%", display:"flex", alignItems:"center", gap:9,
-              padding:"9px 12px", borderRadius:10, marginTop:8,
+
+            {/* Cambiar contraseña */}
+            <button onClick={()=>setShowChangePassword(true)} style={{
+              width:"100%", display:"flex", alignItems:"center", gap:9,
+              padding:"9px 12px", borderRadius:10, marginTop:6,
               border:`1px solid ${T.border}`, cursor:"pointer",
               background:"transparent", color:T.text3,
-              fontWeight:600, fontSize:12, fontFamily:"inherit",
-              transition:"all 0.15s" }}
-              onMouseEnter={e=>{ e.currentTarget.style.background="#fee2e2"; e.currentTarget.style.color=T.red; }}
-              onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=T.text3; }}>
-              🚪 Cerrar sesión
+              fontWeight:600, fontSize:12, fontFamily:"inherit", transition:"all 0.15s" }}
+              onMouseEnter={e=>{ e.currentTarget.style.background=T.accentBg; e.currentTarget.style.color=T.accent; e.currentTarget.style.borderColor=T.accent; }}
+              onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=T.text3; e.currentTarget.style.borderColor=T.border; }}>
+              🔒 <span>Cambiar contraseña</span>
+            </button>
+
+            {/* Cerrar sesión */}
+            <button onClick={logout} style={{
+              width:"100%", display:"flex", alignItems:"center", gap:9,
+              padding:"9px 12px", borderRadius:10, marginTop:4,
+              border:`1px solid ${T.border}`, cursor:"pointer",
+              background:"transparent", color:T.text3,
+              fontWeight:600, fontSize:12, fontFamily:"inherit", transition:"all 0.15s" }}
+              onMouseEnter={e=>{ e.currentTarget.style.background="#fee2e2"; e.currentTarget.style.color=T.red; e.currentTarget.style.borderColor="#fca5a5"; }}
+              onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=T.text3; e.currentTarget.style.borderColor=T.border; }}>
+              🚪 <span>Cerrar sesión</span>
             </button>
           </div>
         </div>
 
-        {/* ── MAIN ───────────────────────────────────────────────────────── */}
+        {/* ── MAIN ─────────────────────────────────────────────────────── */}
         <div style={{ marginLeft:220, flex:1, padding:"28px 28px 48px" }}>
-          {/* Header */}
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
             <div>
               <h1 style={{ fontSize:24, fontWeight:900, color:T.text, letterSpacing:"-0.5px" }}>{LABELS[tab]}</h1>
@@ -1357,11 +1447,10 @@ export default function Dashboard() {
               </>}
             </div>
           </div>
-
           {TABS[tab]?.()}
         </div>
 
-        {/* ── MODALS ─────────────────────────────────────────────────────── */}
+        {/* ── MODALS ───────────────────────────────────────────────────── */}
         {modal==="member"     && <MemberModal onClose={()=>setModal(null)} onSave={saveMember}/>}
         {modal==="attendance" && <AttendanceModal members={members} todayAttendance={attendance} onClose={()=>setModal(null)} onMark={markAttendance} onExit={markExit}/>}
         {modal==="payment"    && <PaymentModal members={members} onClose={()=>setModal(null)} onSave={registerPayment}/>}
@@ -1370,6 +1459,7 @@ export default function Dashboard() {
         {editMember&&<MemberModal member={editMember} onClose={()=>setEditMember(null)} onSave={saveMember}/>}
         {selectedMember&&!editMember&&renderMemberDetail()}
         {alertModal&&<AlertListModal {...alertModal} onClose={()=>setAlertModal(null)} onSelectMember={m=>setSelectedMember(m)}/>}
+        {showChangePassword&&<ChangePasswordModal onClose={()=>setShowChangePassword(false)}/>}
 
         {/* Toast */}
         {toast&&(
@@ -1377,8 +1467,7 @@ export default function Dashboard() {
             background:toast.type==="err"?T.redBg:T.surface,
             border:`1px solid ${toast.type==="err"?"#fca5a5":T.border}`,
             borderRadius:14, padding:"12px 18px",
-            color:toast.type==="err"?T.red:T.text,
-            fontSize:13, fontWeight:600,
+            color:toast.type==="err"?T.red:T.text, fontSize:13, fontWeight:600,
             boxShadow:"0 8px 32px rgba(0,0,0,0.12)",
             zIndex:9999, animation:"toastIn 0.3s cubic-bezier(.22,1,.36,1)" }}>{toast.msg}</div>
         )}
