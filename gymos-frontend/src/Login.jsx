@@ -89,7 +89,7 @@ export default function Login() {
         {/* Logo */}
  <img src="/img/completo_con.png" alt="GymTactik"
   style={{ width:"100%", maxWidth:280, objectFit:"contain", margin:"0 auto 8px", display:"block" }}/>
-<div style={{ fontWeight:900, fontSize:24, color:"#0f172a", letterSpacing:"-0.5px" }}>GymTactik</div>
+
 
         {/* Error */}
         {error && (
