@@ -9,6 +9,7 @@ const paymentsRoutes   = require("./routes/payments");
 const attendanceRoutes = require("./routes/attendance");
 const gymsRoutes       = require("./routes/gyms");
 const kioskRoutes      = require("./routes/kiosko");
+const analyticsRoutes  = require("./routes/analytics");
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -41,6 +42,7 @@ app.use("/api/payments",   paymentsRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/gyms",       gymsRoutes);
 app.use("/api/kiosko",     kioskRoutes);
+app.use("/api/analytics",  analyticsRoutes);
 
 app.get("/api/health", (_, res) => res.json({ status:"ok", version:"1.0.0" }));
 app.use((_, res) => res.status(404).json({ error:"Endpoint no encontrado" }));

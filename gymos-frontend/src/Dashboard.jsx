@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import api from "./api";
+import Analytics from "./Analytics";
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 const todayStr  = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Costa_Rica" });
@@ -31,14 +32,14 @@ const initials  = (name="?") => name.split(" ").map(w=>w[0]).join("").slice(0,2)
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 const T = {
-  bg:"#f0f4ff", bg2:"#fafbff", surface:"#ffffff",
+  bg:"#f0f4ff", surface:"#ffffff",
   border:"#e2e8f0", border2:"#cbd5e1",
   text:"#0f172a", text2:"#475569", text3:"#94a3b8",
   accent:"#6366f1", accentBg:"#eef2ff",
-  green:"#059669", greenBg:"#d1fae5",
+  green:"#059669",  greenBg:"#d1fae5",
   orange:"#ea580c", orangeBg:"#ffedd5",
-  red:"#dc2626", redBg:"#fee2e2",
-  blue:"#0891b2", blueBg:"#e0f2fe",
+  red:"#dc2626",    redBg:"#fee2e2",
+  blue:"#0891b2",   blueBg:"#e0f2fe",
   yellow:"#d97706", yellowBg:"#fef3c7",
 };
 
@@ -216,14 +217,6 @@ function ChangePasswordModal({ onClose }) {
     } finally { setLoading(false); }
   };
 
-  const passInputStyle = (val, matchVal=null) => ({
-    ...iStyle, marginBottom:0, paddingRight:46,
-    ...(val ? {
-      border:`2px solid ${matchVal!==null ? (val===matchVal?"#059669":"#dc2626") : (strengthColor[strength]||T.border)}`,
-      boxShadow:`0 0 0 3px ${matchVal!==null ? (val===matchVal?"#05966922":"#dc262622") : (strengthColor[strength]+"22")}`,
-    } : {}),
-  });
-
   const ShowBtn = ({ show, onToggle }) => (
     <button type="button" onClick={onToggle} style={{
       position:"absolute", right:14, top:"50%", transform:"translateY(-50%)",
@@ -237,24 +230,20 @@ function ChangePasswordModal({ onClose }) {
     <Modal title="🔒 Cambiar Contraseña" onClose={onClose}>
       {success ? (
         <div style={{ textAlign:"center", padding:"20px 0" }}>
-          <div style={{
-            width:88, height:88, borderRadius:"50%",
+          <div style={{ width:88, height:88, borderRadius:"50%",
             background:"linear-gradient(135deg,#059669,#34d399)",
             display:"flex", alignItems:"center", justifyContent:"center",
             fontSize:40, margin:"0 auto 18px",
-            boxShadow:"0 8px 24px rgba(5,150,105,0.3)",
-          }}>✅</div>
+            boxShadow:"0 8px 24px rgba(5,150,105,0.3)" }}>✅</div>
           <div style={{ color:T.green, fontWeight:800, fontSize:18, marginBottom:8 }}>¡Contraseña actualizada!</div>
           <div style={{ color:T.text2, fontSize:13, marginBottom:24, lineHeight:1.6 }}>
-            Tu contraseña se cambió correctamente.<br/>Usá la nueva contraseña en tu próximo inicio de sesión.
+            Tu contraseña se cambió correctamente.
           </div>
           <Btn onClick={onClose} style={{ width:"100%" }}>Cerrar</Btn>
         </div>
       ) : (
         <>
           <ErrBox msg={error}/>
-
-          {/* Contraseña actual */}
           <Lbl>CONTRASEÑA ACTUAL</Lbl>
           <div style={{ position:"relative", marginBottom:14 }}>
             <input type={showCurrent?"text":"password"} value={current}
@@ -262,17 +251,15 @@ function ChangePasswordModal({ onClose }) {
               style={{ ...iStyle, marginBottom:0, paddingRight:46 }}/>
             <ShowBtn show={showCurrent} onToggle={()=>setShowCurrent(v=>!v)}/>
           </div>
-
-          {/* Nueva contraseña */}
           <Lbl>NUEVA CONTRASEÑA</Lbl>
           <div style={{ position:"relative", marginBottom:8 }}>
             <input type={showNew?"text":"password"} value={newPass}
               onChange={e=>setNewPass(e.target.value)} placeholder="Mínimo 6 caracteres"
-              style={passInputStyle(newPass)}/>
+              style={{ ...iStyle, marginBottom:0, paddingRight:46,
+                ...(newPass?{ border:`2px solid ${strengthColor[strength]||T.border}`,
+                  boxShadow:`0 0 0 3px ${(strengthColor[strength]||T.border)}22` }:{}) }}/>
             <ShowBtn show={showNew} onToggle={()=>setShowNew(v=>!v)}/>
           </div>
-
-          {/* Barra de fortaleza */}
           {newPass && (
             <div style={{ marginBottom:14 }}>
               <div style={{ display:"flex", gap:4, marginBottom:5 }}>
@@ -287,33 +274,29 @@ function ChangePasswordModal({ onClose }) {
               </div>
             </div>
           )}
-
-          {/* Confirmar */}
           <Lbl>CONFIRMAR NUEVA CONTRASEÑA</Lbl>
-          <div style={{ position:"relative", marginBottom:22 }}>
+          <div style={{ position:"relative", marginBottom:20 }}>
             <input type={showConfirm?"text":"password"} value={confirm}
               onChange={e=>setConfirm(e.target.value)} placeholder="Repetí la nueva contraseña"
-              style={passInputStyle(confirm, newPass)}/>
+              style={{ ...iStyle, marginBottom:0, paddingRight:46,
+                ...(confirm?{ border:`2px solid ${confirm===newPass?T.green:T.red}`,
+                  boxShadow:`0 0 0 3px ${confirm===newPass?"#05966922":"#dc262622"}` }:{}) }}/>
             <ShowBtn show={showConfirm} onToggle={()=>setShowConfirm(v=>!v)}/>
             {confirm && confirm===newPass && (
               <div style={{ position:"absolute", right:46, top:"50%", transform:"translateY(-50%)",
                 color:T.green, fontSize:16, pointerEvents:"none" }}>✓</div>
             )}
           </div>
-
           <div style={{ background:"#f8fafc", border:`1px solid ${T.border}`, borderRadius:12,
             padding:"10px 14px", marginBottom:18, display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ fontSize:16 }}>💡</span>
+            <span>💡</span>
             <span style={{ color:T.text2, fontSize:12 }}>
               Usá una combinación de letras, números y símbolos para una contraseña más segura.
             </span>
           </div>
-
           <div style={{ display:"flex", gap:8 }}>
             <Btn variant="ghost" onClick={onClose} style={{ flex:1 }}>Cancelar</Btn>
-            <Btn onClick={handleSave}
-              disabled={!current||!newPass||!confirm||loading}
-              style={{ flex:2 }}>
+            <Btn onClick={handleSave} disabled={!current||!newPass||!confirm||loading} style={{ flex:2 }}>
               {loading?"Guardando...":"🔒 Cambiar Contraseña"}
             </Btn>
           </div>
@@ -367,8 +350,7 @@ function MemberModal({ member, onClose, onSave }) {
             flex:1, minWidth:80, padding:"9px 6px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
             border:`2px solid ${form.plan===p?(PLAN_META[p]?.color||T.accent):T.border}`,
             background:form.plan===p?(PLAN_META[p]?.bg||T.accentBg):T.surface,
-            color:form.plan===p?(PLAN_META[p]?.color||T.accent):T.text2, fontSize:11, fontWeight:700,
-            transition:"all 0.15s" }}>{p}</button>
+            color:form.plan===p?(PLAN_META[p]?.color||T.accent):T.text2, fontSize:11, fontWeight:700 }}>{p}</button>
         ))}
       </div>
       <Lbl>GRUPO FAMILIAR</Lbl>
@@ -419,8 +401,7 @@ function PaymentModal({ members, onClose, onSave }) {
             style={{ flex:1, padding:"10px", borderRadius:12, cursor:"pointer", fontFamily:"inherit",
               border:`2px solid ${(t==="Visitante")===visitorMode?T.accent:T.border}`,
               background:(t==="Visitante")===visitorMode?T.accentBg:T.surface,
-              color:(t==="Visitante")===visitorMode?T.accent:T.text2,
-              fontSize:13, fontWeight:700, transition:"all 0.15s" }}>{t}</button>
+              color:(t==="Visitante")===visitorMode?T.accent:T.text2, fontSize:13, fontWeight:700 }}>{t}</button>
         ))}
       </div>
       {!visitorMode && (
@@ -444,7 +425,7 @@ function PaymentModal({ members, onClose, onSave }) {
       )}
       <Lbl>MONTO (₡)</Lbl>
       <div style={{ position:"relative", marginBottom:14 }}>
-        <span style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", color:T.text3, fontWeight:700, fontSize:15 }}>₡</span>
+        <span style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", color:T.text3, fontWeight:700 }}>₡</span>
         <input type="number" min="0" placeholder="0" value={amount} onChange={e=>setAmount(e.target.value)}
           style={{ ...iStyle, marginBottom:0, paddingLeft:30, fontSize:18, fontWeight:700,
             border:`2px solid ${amount?T.accent:T.border}`,
@@ -458,7 +439,7 @@ function PaymentModal({ members, onClose, onSave }) {
             flex:1, padding:"12px", borderRadius:12, cursor:"pointer", fontFamily:"inherit",
             border:`2px solid ${method===m?T.accent:T.border}`,
             background:method===m?T.accentBg:T.surface,
-            color:method===m?T.accent:T.text2, fontSize:13, fontWeight:700, transition:"all 0.15s" }}>
+            color:method===m?T.accent:T.text2, fontSize:13, fontWeight:700 }}>
             {m==="SINPE"?"📱 SINPE":"💵 Efectivo"}
           </button>
         ))}
@@ -472,7 +453,7 @@ function PaymentModal({ members, onClose, onSave }) {
                 flex:1, padding:"9px 4px", borderRadius:10, cursor:"pointer", fontFamily:"inherit",
                 border:`2px solid ${discount===d?T.blue:T.border}`,
                 background:discount===d?T.blueBg:T.surface,
-                color:discount===d?T.blue:T.text3, fontSize:11, fontWeight:700, transition:"all 0.15s" }}>{d}%</button>
+                color:discount===d?T.blue:T.text3, fontSize:11, fontWeight:700 }}>{d}%</button>
             ))}
           </div>
         </>
@@ -514,7 +495,7 @@ function AttendanceModal({ members, todayAttendance, onClose, onMark, onExit }) 
             style={{ flex:1, padding:"10px", borderRadius:12, cursor:"pointer", fontFamily:"inherit",
               border:`2px solid ${(t!=="Miembro")===visitorMode?T.blue:T.border}`,
               background:(t!=="Miembro")===visitorMode?T.blueBg:T.surface,
-              color:(t!=="Miembro")===visitorMode?T.blue:T.text2, fontSize:12, fontWeight:700, transition:"all 0.15s" }}>{t}</button>
+              color:(t!=="Miembro")===visitorMode?T.blue:T.text2, fontSize:12, fontWeight:700 }}>{t}</button>
         ))}
       </div>
       {!visitorMode && (
@@ -833,7 +814,7 @@ function CashReportModal({ onClose }) {
         {[["day","Día"],["week","Semana"],["month","Mes"]].map(([k,l])=>(
           <button key={k} onClick={()=>setPeriod(k)} style={{ flex:1, padding:"10px", borderRadius:12, cursor:"pointer", fontFamily:"inherit",
             border:`2px solid ${period===k?T.green:T.border}`, background:period===k?T.greenBg:T.surface,
-            color:period===k?T.green:T.text2, fontSize:13, fontWeight:700, transition:"all 0.15s" }}>{l}</button>
+            color:period===k?T.green:T.text2, fontSize:13, fontWeight:700 }}>{l}</button>
         ))}
       </div>
       {period==="month" && (
@@ -900,11 +881,12 @@ function CashReportModal({ onClose }) {
 
 // ─── NAV ──────────────────────────────────────────────────────────────────────
 const NAV = [
-  { id:"dashboard", icon:"⚡", label:"Dashboard" },
-  { id:"members",   icon:"👥", label:"Miembros" },
-  { id:"attendance",icon:"📋", label:"Asistencia" },
-  { id:"payments",  icon:"💳", label:"Pagos" },
-  { id:"blacklist", icon:"🚫", label:"Lista Negra" },
+  { id:"dashboard",  icon:"⚡", label:"Dashboard" },
+  { id:"members",    icon:"👥", label:"Miembros" },
+  { id:"attendance", icon:"📋", label:"Asistencia" },
+  { id:"payments",   icon:"💳", label:"Pagos" },
+  { id:"analytics",  icon:"📊", label:"Analítica" },
+  { id:"blacklist",  icon:"🚫", label:"Lista Negra" },
 ];
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
@@ -1064,7 +1046,7 @@ export default function Dashboard() {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
         {[
           { icon:"👥", label:"Miembros Activos", val:activeCount,          color:T.accent, bg:T.accentBg },
-          { icon:"📋", label:"Asistencia Hoy",   val:attendance.filter(a=>a.type!=="denied").length, color:T.blue, bg:T.blueBg },
+          { icon:"📋", label:"Asistencia Hoy",   val:attendance.filter(a=>a.type!=="denied").length, color:T.blue,   bg:T.blueBg },
           { icon:"💰", label:"Ingresos Hoy",     val:fmtMoney(todayTotal), color:T.green,  bg:T.greenBg },
           { icon:"🚫", label:"Bloqueados",        val:blockedCount,         color:T.red,    bg:T.redBg },
         ].map(s=>(
@@ -1130,7 +1112,7 @@ export default function Dashboard() {
         <input placeholder="🔍  Nombre, cédula o teléfono..." value={search} onChange={e=>setSearch(e.target.value)}
           style={{ flex:1, minWidth:180, background:T.surface, border:`2px solid ${T.border}`, borderRadius:12, padding:"10px 14px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}/>
         {["all","active","overdue","inactive","blocked"].map(s=>(
-          <button key={s} onClick={()=>setFilterStatus(s)} style={{ padding:"8px 14px", borderRadius:10, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s",
+          <button key={s} onClick={()=>setFilterStatus(s)} style={{ padding:"8px 14px", borderRadius:10, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
             border:`2px solid ${filterStatus===s?T.accent:T.border}`, background:filterStatus===s?T.accentBg:T.surface, color:filterStatus===s?T.accent:T.text2 }}>
             {{all:"Todos",active:"Activos",overdue:"Vencidos",inactive:"Inactivos",blocked:"Bloqueados"}[s]}
           </button>
@@ -1326,8 +1308,18 @@ export default function Dashboard() {
     );
   };
 
-  const TABS={dashboard:renderDashboard,members:renderMembers,attendance:renderAttendance,payments:renderPayments,blacklist:renderBlacklist};
-  const LABELS={dashboard:"Dashboard",members:"Miembros",attendance:"Asistencia",payments:"Pagos",blacklist:"Lista Negra"};
+  const TABS = {
+    dashboard:  renderDashboard,
+    members:    renderMembers,
+    attendance: renderAttendance,
+    payments:   renderPayments,
+    analytics:  ()=><Analytics/>,
+    blacklist:  renderBlacklist,
+  };
+  const LABELS = {
+    dashboard:"Dashboard", members:"Miembros", attendance:"Asistencia",
+    payments:"Pagos", analytics:"Analítica", blacklist:"Lista Negra",
+  };
 
   return (
     <>
@@ -1366,7 +1358,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <nav style={{ padding:"10px 10px", flex:1 }}>
+          <nav style={{ padding:"10px 10px", flex:1, overflowY:"auto" }}>
             {NAV.map(item=>(
               <button key={item.id} onClick={()=>setTab(item.id)} style={{
                 width:"100%", display:"flex", alignItems:"center", gap:10,
@@ -1403,7 +1395,6 @@ export default function Dashboard() {
               </button>
             ))}
 
-            {/* Cambiar contraseña */}
             <button onClick={()=>setShowChangePassword(true)} style={{
               width:"100%", display:"flex", alignItems:"center", gap:9,
               padding:"9px 12px", borderRadius:10, marginTop:6,
@@ -1415,7 +1406,6 @@ export default function Dashboard() {
               🔒 <span>Cambiar contraseña</span>
             </button>
 
-            {/* Cerrar sesión */}
             <button onClick={logout} style={{
               width:"100%", display:"flex", alignItems:"center", gap:9,
               padding:"9px 12px", borderRadius:10, marginTop:4,
@@ -1461,7 +1451,6 @@ export default function Dashboard() {
         {alertModal&&<AlertListModal {...alertModal} onClose={()=>setAlertModal(null)} onSelectMember={m=>setSelectedMember(m)}/>}
         {showChangePassword&&<ChangePasswordModal onClose={()=>setShowChangePassword(false)}/>}
 
-        {/* Toast */}
         {toast&&(
           <div style={{ position:"fixed", bottom:24, right:24,
             background:toast.type==="err"?T.redBg:T.surface,
