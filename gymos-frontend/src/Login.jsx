@@ -87,9 +87,9 @@ export default function Login() {
       }}>
 
         {/* Logo */}
-      <img src="/img/completo_sin.png" alt="GymTactik"
-  style={{ height:56, objectFit:"contain", margin:"0 auto 12px", display:"block" }}/>
-<div style={{ color:"#94a3b8", fontSize:13, marginTop:4, fontWeight:500 }}>Panel de Administración</div>
+ <img src="/img/logo_transparente.png" alt="GymTactik"
+  style={{ width:72, height:72, objectFit:"contain", margin:"0 auto 12px", display:"block" }}/>
+<div style={{ fontWeight:900, fontSize:24, color:"#0f172a", letterSpacing:"-0.5px" }}>GymTactik</div>
 
         {/* Error */}
         {error && (
