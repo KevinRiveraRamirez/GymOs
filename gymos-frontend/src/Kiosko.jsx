@@ -159,21 +159,22 @@ export default function Kiosko() {
       `}</style>
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
-      <div style={{
-        position:"fixed", top:0, left:0, right:0,
-        background:"rgba(255,255,255,0.85)",
-        backdropFilter:"blur(20px)",
-        borderBottom:"1px solid #e2e8f0",
-        padding:"14px 32px",
-        display:"flex", justifyContent:"space-between", alignItems:"center",
-        zIndex:100,
-        boxShadow:"0 1px 12px rgba(0,0,0,0.06)",
-      }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-         <img src="/img/completo_sin.png" alt="GymTactik"
-  style={{ height:80, maxWidth:180, objectFit:"contain" }}/>
-<div style={{ fontSize:11, color:"#94a3b8", fontWeight:500, marginLeft:4 }}>Control de Asistencia</div>
-        </div>
+     <div style={{
+  position:"fixed", top:0, left:0, right:0,
+  background:"rgba(255,255,255,0.85)",
+  backdropFilter:"blur(20px)",
+  borderBottom:"1px solid #e2e8f0",
+  padding:"10px 32px",
+  height:64,
+  display:"flex", justifyContent:"space-between", alignItems:"center",
+  zIndex:100,
+  boxShadow:"0 1px 12px rgba(0,0,0,0.06)",
+}}>
+   <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+  <img src="/img/completo_sin.png" alt="GymTactik"
+    style={{ height:40, maxWidth:200, objectFit:"contain" }}/>
+  <div style={{ fontSize:11, color:"#94a3b8", fontWeight:500 }}>Control de Asistencia</div>
+</div>
         <div style={{ textAlign:"right" }}>
           <div style={{
             fontSize:30, fontWeight:700, color:"#0f172a",
