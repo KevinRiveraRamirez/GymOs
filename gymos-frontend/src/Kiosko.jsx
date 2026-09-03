@@ -599,7 +599,7 @@ export default function Kiosko() {
         backdropFilter:"blur(10px)",
         borderTop:"1px solid #f1f5f9",
       }}>
-        GymOS — Sistema de Administración de Gimnasio
+        GymOS — Sistema de Administración de Gimnasio · KI Technologies
       </div>
     </div>
   );
