@@ -1589,7 +1589,7 @@ export default function Dashboard() {
           borderRight:`1px solid ${T.border}`, display:"flex", flexDirection:"column",
           zIndex:100, boxShadow:"2px 0 16px rgba(99,102,241,0.08)" }}>
 
-          <div style={{ padding:"14px 20px", height:20, borderBottom:`1px solid ${T.border}`,
+          <div style={{ padding:"14px 20px", height:80, borderBottom:`1px solid ${T.border}`,
             display:"flex", alignItems:"center" }}>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2, width:"100%" }}>
               <img src="/img/completo_sin.png" alt="GymTactik"
