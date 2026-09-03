@@ -19,10 +19,11 @@ app.set('trust proxy', 1);
 app.use(cors({
   origin: function(origin, callback) {
     const allowed = [
-      "https://gym-os-qtw7.vercel.app",
-      "http://localhost:5173",
-      process.env.FRONTEND_URL
-    ].filter(Boolean);
+  "https://gym-os-qtw7.vercel.app",
+  "https://gymos-production.up.railway.app",
+  "http://localhost:5173",
+  process.env.FRONTEND_URL
+].filter(Boolean);
     if(!origin || allowed.includes(origin)) callback(null, true);
     else callback(new Error("Not allowed by CORS"));
   },
