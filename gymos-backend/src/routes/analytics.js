@@ -5,7 +5,8 @@ const { auth } = require("../middleware/auth");
 const router = express.Router();
 router.use(auth);
 
-const CR_TODAY = `(NOW() AT TIME ZONE 'America/Costa_Rica')::date`;
+// Fecha actual en Costa Rica — envuelta en paréntesis para uso seguro en expresiones
+const CR_TODAY = `((NOW() AT TIME ZONE 'America/Costa_Rica')::date)`;
 
 // ── GET /api/analytics/overview ───────────────────────────────────────────────
 router.get("/overview", async (req, res) => {
@@ -14,7 +15,7 @@ router.get("/overview", async (req, res) => {
     const [membersRes, revenueRes, attendanceRes, newMembersRes, churnRes] = await Promise.all([
       pool.query(`
         SELECT
-          COUNT(*) FILTER (WHERE status='active' AND NOT blocked)  AS active,
+          COUNT(*) FILTER (WHERE status='active'  AND NOT blocked) AS active,
           COUNT(*) FILTER (WHERE status='overdue' AND NOT blocked) AS overdue,
           COUNT(*) FILTER (WHERE blocked)                          AS blocked,
           COUNT(*)                                                  AS total
@@ -23,23 +24,23 @@ router.get("/overview", async (req, res) => {
 
       pool.query(`
         SELECT
-          COALESCE(SUM(amount) FILTER (WHERE paid_at >= DATE_TRUNC('month', ${CR_TODAY})), 0)          AS this_month,
+          COALESCE(SUM(amount) FILTER (WHERE paid_at >= DATE_TRUNC('month', ${CR_TODAY})), 0)   AS this_month,
           COALESCE(SUM(amount) FILTER (WHERE
             paid_at >= DATE_TRUNC('month', ${CR_TODAY} - INTERVAL '1 month') AND
-            paid_at <  DATE_TRUNC('month', ${CR_TODAY})), 0)                                            AS last_month,
-          COALESCE(SUM(amount) FILTER (WHERE paid_at = ${CR_TODAY}), 0)                                AS today
+            paid_at <  DATE_TRUNC('month', ${CR_TODAY})), 0)                                     AS last_month,
+          COALESCE(SUM(amount) FILTER (WHERE paid_at = ${CR_TODAY}), 0)                         AS today
         FROM payments WHERE gym_id=$1
       `, [gymId]),
 
       pool.query(`
         SELECT
           COUNT(*) FILTER (WHERE date = ${CR_TODAY} AND type != 'denied') AS today,
-          ROUND(AVG(daily_count))                                           AS avg_30
+          COALESCE(ROUND(AVG(daily_count)), 0)                             AS avg_30
         FROM (
           SELECT date, COUNT(*) FILTER (WHERE type != 'denied') AS daily_count
           FROM attendance
           WHERE gym_id=$1
-            AND date >= ${CR_TODAY} - INTERVAL '30 days'
+            AND date >= (${CR_TODAY} - INTERVAL '30 days')
             AND date <  ${CR_TODAY}
           GROUP BY date
         ) sub
@@ -47,10 +48,10 @@ router.get("/overview", async (req, res) => {
 
       pool.query(`
         SELECT
-          COUNT(*) FILTER (WHERE joined_at >= DATE_TRUNC('month', ${CR_TODAY}))                         AS this_month,
+          COUNT(*) FILTER (WHERE joined_at >= DATE_TRUNC('month', ${CR_TODAY}))                  AS this_month,
           COUNT(*) FILTER (WHERE
             joined_at >= DATE_TRUNC('month', ${CR_TODAY} - INTERVAL '1 month') AND
-            joined_at <  DATE_TRUNC('month', ${CR_TODAY}))                                              AS last_month
+            joined_at <  DATE_TRUNC('month', ${CR_TODAY}))                                       AS last_month
         FROM members WHERE gym_id=$1
       `, [gymId]),
 
@@ -75,11 +76,11 @@ router.get("/overview", async (req, res) => {
     const a  = attendanceRes.rows[0];
     const nm = newMembersRes.rows[0];
 
-    const revChange = r.last_month > 0
-      ? Math.round(((r.this_month - r.last_month) / r.last_month) * 100)
+    const revChange = Number(r.last_month) > 0
+      ? Math.round(((Number(r.this_month) - Number(r.last_month)) / Number(r.last_month)) * 100)
       : null;
-    const newMembersChange = nm.last_month > 0
-      ? Math.round(((nm.this_month - nm.last_month) / nm.last_month) * 100)
+    const newMembersChange = Number(nm.last_month) > 0
+      ? Math.round(((Number(nm.this_month) - Number(nm.last_month)) / Number(nm.last_month)) * 100)
       : null;
 
     res.json({
@@ -109,7 +110,7 @@ router.get("/overview", async (req, res) => {
       },
     });
   } catch (err) {
-    console.error(err);
+    console.error("analytics/overview error:", err.message);
     res.status(500).json({ error: "Error al obtener overview" });
   }
 });
@@ -120,15 +121,15 @@ router.get("/revenue", async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT
-        TO_CHAR(DATE_TRUNC('month', paid_at), 'Mon YY')    AS month,
-        DATE_TRUNC('month', paid_at)                        AS month_date,
-        COALESCE(SUM(amount), 0)                            AS total,
+        TO_CHAR(DATE_TRUNC('month', paid_at), 'Mon YY')          AS month,
+        DATE_TRUNC('month', paid_at)                              AS month_date,
+        COALESCE(SUM(amount), 0)                                  AS total,
         COALESCE(SUM(amount) FILTER (WHERE method='SINPE'), 0)    AS sinpe,
         COALESCE(SUM(amount) FILTER (WHERE method='Efectivo'), 0) AS efectivo,
-        COUNT(*)                                            AS transactions
+        COUNT(*)                                                  AS transactions
       FROM payments
       WHERE gym_id=$1
-        AND paid_at >= DATE_TRUNC('month', ${CR_TODAY} - INTERVAL '5 months')
+        AND paid_at >= DATE_TRUNC('month', (${CR_TODAY} - INTERVAL '5 months'))
       GROUP BY month_date, month
       ORDER BY month_date ASC
     `, [gymId]);
@@ -141,7 +142,7 @@ router.get("/revenue", async (req, res) => {
       transactions: Number(r.transactions),
     })));
   } catch (err) {
-    console.error(err);
+    console.error("analytics/revenue error:", err.message);
     res.status(500).json({ error: "Error al obtener ingresos" });
   }
 });
@@ -153,11 +154,11 @@ router.get("/attendance", async (req, res) => {
     const [byDayRes, byHourRes, dailyRes] = await Promise.all([
       pool.query(`
         SELECT
-          EXTRACT(DOW FROM date) AS dow,
-          COUNT(*) FILTER (WHERE type != 'denied') AS visits
+          EXTRACT(DOW FROM date)                           AS dow,
+          COUNT(*) FILTER (WHERE type != 'denied')         AS visits
         FROM attendance
         WHERE gym_id=$1
-          AND date >= ${CR_TODAY} - INTERVAL '30 days'
+          AND date >= (${CR_TODAY} - INTERVAL '30 days')
         GROUP BY dow
         ORDER BY dow
       `, [gymId]),
@@ -168,7 +169,7 @@ router.get("/attendance", async (req, res) => {
           COUNT(*) AS visits
         FROM attendance
         WHERE gym_id=$1
-          AND date >= ${CR_TODAY} - INTERVAL '30 days'
+          AND date >= (${CR_TODAY} - INTERVAL '30 days')
           AND type != 'denied'
         GROUP BY hour
         ORDER BY hour
@@ -181,7 +182,7 @@ router.get("/attendance", async (req, res) => {
           COUNT(*) FILTER (WHERE type = 'visitor')  AS visitors
         FROM attendance
         WHERE gym_id=$1
-          AND date >= ${CR_TODAY} - INTERVAL '13 days'
+          AND date >= (${CR_TODAY} - INTERVAL '13 days')
         GROUP BY date
         ORDER BY date ASC
       `, [gymId]),
@@ -204,7 +205,7 @@ router.get("/attendance", async (req, res) => {
       })),
     });
   } catch (err) {
-    console.error(err);
+    console.error("analytics/attendance error:", err.message);
     res.status(500).json({ error: "Error al obtener asistencia" });
   }
 });
@@ -221,7 +222,7 @@ router.get("/members", async (req, res) => {
           COUNT(*)                                           AS new_members
         FROM members
         WHERE gym_id=$1
-          AND joined_at >= DATE_TRUNC('month', ${CR_TODAY} - INTERVAL '5 months')
+          AND joined_at >= DATE_TRUNC('month', (${CR_TODAY} - INTERVAL '5 months'))
         GROUP BY month_date, month
         ORDER BY month_date ASC
       `, [gymId]),
@@ -246,7 +247,7 @@ router.get("/members", async (req, res) => {
         SELECT member_name, COUNT(*) AS visits
         FROM attendance
         WHERE gym_id=$1
-          AND date >= ${CR_TODAY} - INTERVAL '30 days'
+          AND date >= (${CR_TODAY} - INTERVAL '30 days')
           AND type = 'member'
         GROUP BY member_name
         ORDER BY visits DESC
@@ -276,7 +277,7 @@ router.get("/members", async (req, res) => {
       })),
     });
   } catch (err) {
-    console.error(err);
+    console.error("analytics/members error:", err.message);
     res.status(500).json({ error: "Error al obtener datos de miembros" });
   }
 });
