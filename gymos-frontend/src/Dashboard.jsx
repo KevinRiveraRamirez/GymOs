@@ -1347,9 +1347,9 @@ export default function Dashboard() {
 
           <div style={{ padding:"22px 20px 18px", borderBottom:`1px solid ${T.border}` }}>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-             <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-  <img src="/img/completo_sin.png" alt="GymTactik"
-    style={{ height:28, objectFit:"contain", objectPosition:"left" }}/>
+   <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, width:"100%" }}>
+  <img src="/img/completo_con.png" alt="GymTactik"
+    style={{ height:44, objectFit:"contain" }}/>
   <div style={{ fontSize:10, color:T.text3, fontWeight:500 }}>{user?.gym?.name}</div>
 </div>
             </div>
