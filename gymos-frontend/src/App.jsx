@@ -30,9 +30,6 @@ function ProtectedRoute({ children }) {
       <div className="loading-card" style={{ textAlign:"center" }}>
   <img className="loading-icon" src="/img/logo_transparente.png" alt="GymTactik"
   style={{ width:80, height:80, objectFit:"contain", margin:"0 auto 18px", display:"block" }}/>
-<img src="/img/completo_sin.png" alt="GymTactik"
-  style={{ height:32, objectFit:"contain", margin:"0 auto 6px", display:"block" }}/>
-        <div style={{ color:"#0f172a", fontWeight:900, fontSize:20, marginBottom:6, letterSpacing:"-0.3px" }}>GymTactik</div>
         <div style={{ color:"#94a3b8", fontSize:13, fontWeight:500 }}>Cargando...</div>
       </div>
     </div>
