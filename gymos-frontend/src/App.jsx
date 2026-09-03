@@ -28,13 +28,10 @@ function ProtectedRoute({ children }) {
         .loading-icon { animation: pulse 1.4s ease-in-out infinite; }
       `}</style>
       <div className="loading-card" style={{ textAlign:"center" }}>
-        <div className="loading-icon" style={{
-          width:68, height:68, borderRadius:20,
-          background:"linear-gradient(135deg,#6366f1,#818cf8)",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          fontSize:32, margin:"0 auto 18px",
-          boxShadow:"0 8px 28px rgba(99,102,241,0.3)",
-        }}>💪</div>
+  <img className="loading-icon" src="/img/logo_transparente.png" alt="GymTactik"
+  style={{ width:80, height:80, objectFit:"contain", margin:"0 auto 18px", display:"block" }}/>
+<img src="/img/completo_sin.png" alt="GymTactik"
+  style={{ height:32, objectFit:"contain", margin:"0 auto 6px", display:"block" }}/>
         <div style={{ color:"#0f172a", fontWeight:900, fontSize:20, marginBottom:6, letterSpacing:"-0.3px" }}>GymTactik</div>
         <div style={{ color:"#94a3b8", fontSize:13, fontWeight:500 }}>Cargando...</div>
       </div>

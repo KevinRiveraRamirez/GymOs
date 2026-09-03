@@ -170,16 +170,9 @@ export default function Kiosko() {
         boxShadow:"0 1px 12px rgba(0,0,0,0.06)",
       }}>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <div style={{
-            width:42, height:42, borderRadius:13,
-            background:"linear-gradient(135deg,#6366f1,#818cf8)",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:22, boxShadow:"0 4px 12px rgba(99,102,241,0.3)",
-          }}>💪</div>
-          <div>
-            <div style={{ fontWeight:900, fontSize:17, color:"#0f172a", letterSpacing:"-0.3px" }}>GymTactik</div>
-            <div style={{ fontSize:11, color:"#94a3b8", fontWeight:500 }}>Control de Asistencia</div>
-          </div>
+         <img src="/img/completo_sin.png" alt="GymTactik"
+  style={{ height:36, objectFit:"contain" }}/>
+<div style={{ fontSize:11, color:"#94a3b8", fontWeight:500, marginLeft:4 }}>Control de Asistencia</div>
         </div>
         <div style={{ textAlign:"right" }}>
           <div style={{

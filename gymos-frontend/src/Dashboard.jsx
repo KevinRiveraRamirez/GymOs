@@ -1347,14 +1347,11 @@ export default function Dashboard() {
 
           <div style={{ padding:"22px 20px 18px", borderBottom:`1px solid ${T.border}` }}>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <div style={{ width:40, height:40, borderRadius:12,
-                background:"linear-gradient(135deg,#6366f1,#818cf8)",
-                display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:20, boxShadow:"0 4px 12px rgba(99,102,241,0.3)" }}>💪</div>
-              <div>
-                <div style={{ fontWeight:900, fontSize:15, color:T.text, letterSpacing:"-0.3px" }}>GymTactik</div>
-                <div style={{ fontSize:10, color:T.text3, fontWeight:500 }}>{user?.gym?.name}</div>
-              </div>
+             <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+  <img src="/img/completo_sin.png" alt="GymTactik"
+    style={{ height:28, objectFit:"contain", objectPosition:"left" }}/>
+  <div style={{ fontSize:10, color:T.text3, fontWeight:500 }}>{user?.gym?.name}</div>
+</div>
             </div>
           </div>
 

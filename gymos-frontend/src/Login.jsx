@@ -87,17 +87,9 @@ export default function Login() {
       }}>
 
         {/* Logo */}
-        <div style={{ textAlign:"center", marginBottom:36 }}>
-          <div style={{
-            width:68, height:68, borderRadius:20,
-            background:"linear-gradient(135deg,#6366f1,#818cf8)",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:32, margin:"0 auto 16px",
-            boxShadow:"0 8px 24px rgba(99,102,241,0.3)",
-          }}>💪</div>
-          <div style={{ fontWeight:900, fontSize:24, color:"#0f172a", letterSpacing:"-0.5px" }}>GymTactik</div>
-          <div style={{ color:"#94a3b8", fontSize:13, marginTop:4, fontWeight:500 }}>Panel de Administración</div>
-        </div>
+      <img src="/img/completo_sin.png" alt="GymTactik"
+  style={{ height:56, objectFit:"contain", margin:"0 auto 12px", display:"block" }}/>
+<div style={{ color:"#94a3b8", fontSize:13, marginTop:4, fontWeight:500 }}>Panel de Administración</div>
 
         {/* Error */}
         {error && (
