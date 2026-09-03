@@ -171,7 +171,7 @@ export default function Kiosko() {
       }}>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
          <img src="/img/completo_sin.png" alt="GymTactik"
-  style={{ height:60, objectFit:"contain" }}/>
+  style={{ height:36, maxWidth:180, objectFit:"contain" }}/>
 <div style={{ fontSize:11, color:"#94a3b8", fontWeight:500, marginLeft:4 }}>Control de Asistencia</div>
         </div>
         <div style={{ textAlign:"right" }}>
