@@ -35,7 +35,7 @@ function ProtectedRoute({ children }) {
           fontSize:32, margin:"0 auto 18px",
           boxShadow:"0 8px 28px rgba(99,102,241,0.3)",
         }}>💪</div>
-        <div style={{ color:"#0f172a", fontWeight:900, fontSize:20, marginBottom:6, letterSpacing:"-0.3px" }}>GymOS</div>
+        <div style={{ color:"#0f172a", fontWeight:900, fontSize:20, marginBottom:6, letterSpacing:"-0.3px" }}>GymTactik</div>
         <div style={{ color:"#94a3b8", fontSize:13, fontWeight:500 }}>Cargando...</div>
       </div>
     </div>

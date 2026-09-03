@@ -169,7 +169,6 @@ export default function Kiosko() {
         zIndex:100,
         boxShadow:"0 1px 12px rgba(0,0,0,0.06)",
       }}>
-        {/* Logo */}
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <div style={{
             width:42, height:42, borderRadius:13,
@@ -178,12 +177,10 @@ export default function Kiosko() {
             fontSize:22, boxShadow:"0 4px 12px rgba(99,102,241,0.3)",
           }}>💪</div>
           <div>
-            <div style={{ fontWeight:900, fontSize:17, color:"#0f172a", letterSpacing:"-0.3px" }}>GymOS</div>
+            <div style={{ fontWeight:900, fontSize:17, color:"#0f172a", letterSpacing:"-0.3px" }}>GymTactik</div>
             <div style={{ fontSize:11, color:"#94a3b8", fontWeight:500 }}>Control de Asistencia</div>
           </div>
         </div>
-
-        {/* Reloj */}
         <div style={{ textAlign:"right" }}>
           <div style={{
             fontSize:30, fontWeight:700, color:"#0f172a",
@@ -199,7 +196,6 @@ export default function Kiosko() {
         {/* IDLE / SEARCHING */}
         {(state === "idle" || state === "searching") && (
           <div className="fade-up" style={{ textAlign:"center" }}>
-            {/* Icono bienvenida */}
             <div style={{
               width:88, height:88, borderRadius:"50%",
               background:"linear-gradient(135deg,#6366f1,#818cf8)",
@@ -207,15 +203,12 @@ export default function Kiosko() {
               fontSize:42, margin:"0 auto 20px",
               boxShadow:"0 8px 32px rgba(99,102,241,0.25)",
             }}>👋</div>
-
             <h1 style={{ fontSize:30, fontWeight:900, color:"#0f172a", marginBottom:8, letterSpacing:"-0.5px" }}>
               ¡Bienvenido!
             </h1>
             <p style={{ color:"#64748b", fontSize:15, marginBottom:32, fontWeight:500 }}>
               Busca tu nombre o cédula para marcar tu asistencia
             </p>
-
-            {/* Card de búsqueda */}
             <div style={{
               background:"#ffffff",
               border:"1px solid #e2e8f0",
@@ -227,12 +220,8 @@ export default function Kiosko() {
               <label style={{
                 display:"block", fontSize:11, color:"#94a3b8",
                 fontWeight:700, letterSpacing:"1.2px", marginBottom:10, textAlign:"left",
-              }}>
-                NOMBRE O CÉDULA
-              </label>
-
+              }}>NOMBRE O CÉDULA</label>
               <div style={{ position:"relative" }}>
-                {/* Ícono lupa */}
                 <div style={{
                   position:"absolute", left:16, top:"50%", transform:"translateY(-50%)",
                   fontSize:18, pointerEvents:"none",
@@ -257,7 +246,6 @@ export default function Kiosko() {
                     boxShadow: query ? "0 0 0 4px rgba(99,102,241,0.1)" : "none",
                   }}
                 />
-                {/* Spinner */}
                 {state === "searching" && (
                   <div className="shimmer" style={{
                     position:"absolute", right:16, top:"50%", transform:"translateY(-50%)",
@@ -266,7 +254,6 @@ export default function Kiosko() {
                 )}
               </div>
 
-              {/* Resultados */}
               {results.length > 0 && (
                 <div className="scale-in" style={{
                   position:"absolute", left:24, right:24, top:"calc(100% - 4px)",
@@ -279,17 +266,14 @@ export default function Kiosko() {
                   boxShadow:"0 16px 48px rgba(0,0,0,0.12)",
                 }}>
                   {results.map((m, idx) => (
-                    <div
-                      key={m.id}
-                      className="result-row"
+                    <div key={m.id} className="result-row"
                       onClick={() => handleSelectWithCheck(m)}
                       style={{
                         display:"flex", alignItems:"center", gap:12,
                         padding:"13px 16px", cursor:"pointer",
                         borderBottom: idx < results.length-1 ? "1px solid #f1f5f9" : "none",
                         background:"transparent",
-                      }}
-                    >
+                      }}>
                       <div style={{
                         width:44, height:44, borderRadius:"50%",
                         background: m.blocked ? "#f1f5f9" : avatarColor(m.name),
@@ -320,7 +304,6 @@ export default function Kiosko() {
                 </div>
               )}
 
-              {/* Sin resultados */}
               {query.trim().length >= 2 && results.length === 0 && state === "idle" && (
                 <div style={{
                   marginTop:12, display:"flex", alignItems:"center", gap:8,
@@ -331,17 +314,15 @@ export default function Kiosko() {
                 </div>
               )}
             </div>
-
             <p style={{ color:"#cbd5e1", fontSize:12, marginTop:14, fontWeight:500 }}>
               Escribe al menos 2 caracteres para ver resultados
             </p>
           </div>
         )}
 
-        {/* FOUND — confirmar */}
+        {/* FOUND */}
         {state === "found" && member && (
           <div className="fade-up">
-            {/* Card miembro */}
             <div style={{
               background:"#fff",
               border:"1px solid #e2e8f0",
@@ -351,7 +332,6 @@ export default function Kiosko() {
               boxShadow:"0 4px 24px rgba(0,0,0,0.08)",
               marginBottom:16,
             }}>
-              {/* Avatar grande */}
               <div style={{
                 width:96, height:96, borderRadius:"50%",
                 background:`linear-gradient(135deg, ${avatarColor(member.name)}, ${avatarColor(member.name)}bb)`,
@@ -362,13 +342,10 @@ export default function Kiosko() {
               }}>
                 {initials(member.name)}
               </div>
-
               <h2 style={{ fontSize:24, fontWeight:900, color:"#0f172a", marginBottom:4, letterSpacing:"-0.3px" }}>
                 {member.name}
               </h2>
               <p style={{ color:"#94a3b8", fontSize:13, marginBottom:18 }}>CI: {member.cedula}</p>
-
-              {/* Badges */}
               <div style={{ display:"flex", gap:8, justifyContent:"center", marginBottom:20 }}>
                 <span style={{
                   background: PLAN_BG[member.plan] || "#f1f5f9",
@@ -381,8 +358,6 @@ export default function Kiosko() {
                   padding:"6px 16px", borderRadius:20, fontSize:12, fontWeight:700,
                 }}>{member.status==="active" ? "✓ Activo" : "✗ Vencido"}</span>
               </div>
-
-              {/* Vencimiento */}
               <div style={{
                 background:"#f8fafc", borderRadius:12, padding:"10px 16px",
                 display:"inline-flex", alignItems:"center", gap:8,
@@ -393,7 +368,6 @@ export default function Kiosko() {
               </div>
             </div>
 
-            {/* Membresía vencida */}
             {member.status !== "active" ? (
               <>
                 {!member._deniedLogged && (() => {
@@ -401,18 +375,14 @@ export default function Kiosko() {
                   member._deniedLogged = true;
                 })()}
                 <div style={{
-                  background:"#fff5f5",
-                  border:"1px solid #fecaca",
-                  borderRadius:20, padding:"24px",
-                  textAlign:"center", marginBottom:16,
+                  background:"#fff5f5", border:"1px solid #fecaca",
+                  borderRadius:20, padding:"24px", textAlign:"center", marginBottom:16,
                 }}>
                   <div style={{ fontSize:40, marginBottom:10 }}>⚠️</div>
-                  <div style={{ color:"#dc2626", fontWeight:800, fontSize:17, marginBottom:8 }}>
-                    Membresía Vencida
-                  </div>
+                  <div style={{ color:"#dc2626", fontWeight:800, fontSize:17, marginBottom:8 }}>Membresía Vencida</div>
                   <div style={{ color:"#ef4444", fontSize:13, lineHeight:1.6 }}>
                     Venció el <b>{fmtDate(member.expires_at)}</b>.<br/>
-                    Acércate a recepción para renovar tu plan y continuar entrenando.
+                    Acércate a recepción para renovar tu plan.
                   </div>
                 </div>
                 <button onClick={reset} style={{
@@ -420,49 +390,32 @@ export default function Kiosko() {
                   border:"1.5px solid #e2e8f0", background:"#fff",
                   color:"#64748b", fontSize:15, fontWeight:700,
                   cursor:"pointer", fontFamily:"inherit",
-                  transition:"background 0.15s",
-                }}>
-                  ← Volver
-                </button>
+                }}>← Volver</button>
               </>
             ) : (
-              /* Ya dentro o puede entrar */
               <div style={{ display:"flex", gap:10 }}>
                 <button onClick={reset} style={{
                   flex:1, padding:"15px", borderRadius:14,
                   border:"1.5px solid #e2e8f0", background:"#fff",
                   color:"#64748b", fontSize:14, fontWeight:700,
                   cursor:"pointer", fontFamily:"inherit",
-                }}>
-                  Cancelar
-                </button>
-
+                }}>Cancelar</button>
                 {member.alreadyIn ? (
-                  <button
-                    className="btn-exit"
-                    onClick={() => handleMarcar("salida")}
-                    style={{
-                      flex:2, padding:"15px", borderRadius:14, border:"none",
-                      background:"linear-gradient(135deg,#f59e0b,#fbbf24)",
-                      color:"#fff", fontSize:15, fontWeight:800,
-                      cursor:"pointer", fontFamily:"inherit",
-                      boxShadow:"0 4px 16px rgba(245,158,11,0.3)",
-                    }}>
-                    👋 Marcar Salida
-                  </button>
+                  <button className="btn-exit" onClick={() => handleMarcar("salida")} style={{
+                    flex:2, padding:"15px", borderRadius:14, border:"none",
+                    background:"linear-gradient(135deg,#f59e0b,#fbbf24)",
+                    color:"#fff", fontSize:15, fontWeight:800,
+                    cursor:"pointer", fontFamily:"inherit",
+                    boxShadow:"0 4px 16px rgba(245,158,11,0.3)",
+                  }}>👋 Marcar Salida</button>
                 ) : (
-                  <button
-                    className="btn-primary"
-                    onClick={() => handleMarcar("entrada")}
-                    style={{
-                      flex:2, padding:"15px", borderRadius:14, border:"none",
-                      background:"linear-gradient(135deg,#6366f1,#818cf8)",
-                      color:"#fff", fontSize:15, fontWeight:800,
-                      cursor:"pointer", fontFamily:"inherit",
-                      boxShadow:"0 4px 16px rgba(99,102,241,0.3)",
-                    }}>
-                    ✓ Marcar Entrada
-                  </button>
+                  <button className="btn-primary" onClick={() => handleMarcar("entrada")} style={{
+                    flex:2, padding:"15px", borderRadius:14, border:"none",
+                    background:"linear-gradient(135deg,#6366f1,#818cf8)",
+                    color:"#fff", fontSize:15, fontWeight:800,
+                    cursor:"pointer", fontFamily:"inherit",
+                    boxShadow:"0 4px 16px rgba(99,102,241,0.3)",
+                  }}>✓ Marcar Entrada</button>
                 )}
               </div>
             )}
@@ -485,7 +438,6 @@ export default function Kiosko() {
             }}>
               {message === "salida_ok" ? "👋" : "✅"}
             </div>
-
             {member && (
               <div style={{
                 width:64, height:64, borderRadius:"50%",
@@ -498,13 +450,11 @@ export default function Kiosko() {
                 {initials(member.name)}
               </div>
             )}
-
             <h2 style={{ fontSize:28, fontWeight:900, color:"#0f172a", marginBottom:8, letterSpacing:"-0.5px" }}>
               {message === "salida_ok"
                 ? `¡Hasta luego, ${member?.name.split(" ")[0]}!`
                 : `¡Hola, ${member?.name.split(" ")[0]}!`}
             </h2>
-
             <p style={{
               fontSize:16, fontWeight:600, marginBottom:28,
               color: message === "salida_ok" ? "#f59e0b" : "#059669",
@@ -513,10 +463,8 @@ export default function Kiosko() {
                 ? "Salida registrada. ¡Hasta la próxima!"
                 : "Entrada registrada. ¡Buen entrenamiento!"}
             </p>
-
             <div style={{
-              background:"#f8fafc",
-              border:"1px solid #e2e8f0",
+              background:"#f8fafc", border:"1px solid #e2e8f0",
               borderRadius:14, padding:"14px 20px",
               color:"#94a3b8", fontSize:13, fontWeight:500,
               display:"flex", alignItems:"center", justifyContent:"center", gap:8,
@@ -536,12 +484,8 @@ export default function Kiosko() {
               display:"flex", alignItems:"center", justifyContent:"center",
               fontSize:54, margin:"0 auto 24px",
               border:"3px solid #fca5a5",
-            }}>
-              🚫
-            </div>
-            <h2 style={{ fontSize:26, fontWeight:900, color:"#dc2626", marginBottom:10 }}>
-              Acceso Restringido
-            </h2>
+            }}>🚫</div>
+            <h2 style={{ fontSize:26, fontWeight:900, color:"#dc2626", marginBottom:10 }}>Acceso Restringido</h2>
             <p style={{ color:"#64748b", fontSize:15, marginBottom:24, lineHeight:1.6 }}>
               Tu acceso está suspendido.<br/>Acércate a recepción para más información.
             </p>
@@ -566,28 +510,20 @@ export default function Kiosko() {
               display:"flex", alignItems:"center", justifyContent:"center",
               fontSize:54, margin:"0 auto 24px",
               border:"3px solid #fcd34d",
-            }}>
-              ⚠️
-            </div>
-            <h2 style={{ fontSize:26, fontWeight:900, color:"#0f172a", marginBottom:10 }}>
-              Error del sistema
-            </h2>
+            }}>⚠️</div>
+            <h2 style={{ fontSize:26, fontWeight:900, color:"#0f172a", marginBottom:10 }}>Error del sistema</h2>
             <p style={{ color:"#64748b", fontSize:15, marginBottom:24, lineHeight:1.6 }}>
               Ocurrió un error.<br/>Intenta de nuevo o avísale al administrador.
             </p>
             <button onClick={reset} style={{
-              padding:"15px 36px", borderRadius:14,
-              border:"none",
+              padding:"15px 36px", borderRadius:14, border:"none",
               background:"linear-gradient(135deg,#6366f1,#818cf8)",
               color:"#fff", fontSize:15, fontWeight:700,
               cursor:"pointer", fontFamily:"inherit",
               boxShadow:"0 4px 16px rgba(99,102,241,0.3)",
-            }}>
-              Intentar de nuevo
-            </button>
+            }}>Intentar de nuevo</button>
           </div>
         )}
-
       </div>
 
       {/* Footer */}
@@ -599,7 +535,7 @@ export default function Kiosko() {
         backdropFilter:"blur(10px)",
         borderTop:"1px solid #f1f5f9",
       }}>
-        GymOS — Sistema de Administración de Gimnasio · KI Technologies
+        GymTactik — Sistema de Administración de Gimnasio · KI Technologies
       </div>
     </div>
   );

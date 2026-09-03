@@ -95,7 +95,7 @@ export default function Login() {
             fontSize:32, margin:"0 auto 16px",
             boxShadow:"0 8px 24px rgba(99,102,241,0.3)",
           }}>💪</div>
-          <div style={{ fontWeight:900, fontSize:24, color:"#0f172a", letterSpacing:"-0.5px" }}>GymOS</div>
+          <div style={{ fontWeight:900, fontSize:24, color:"#0f172a", letterSpacing:"-0.5px" }}>GymTactik</div>
           <div style={{ color:"#94a3b8", fontSize:13, marginTop:4, fontWeight:500 }}>Panel de Administración</div>
         </div>
 
@@ -112,56 +112,22 @@ export default function Login() {
         )}
 
         <form onSubmit={handleSubmit}>
+          <label style={{ display:"block", fontSize:11, color:"#94a3b8", fontWeight:700, letterSpacing:"1px", marginBottom:8 }}>EMAIL</label>
+          <input className="login-input" type="email" value={email}
+            onChange={e=>setEmail(e.target.value)} placeholder="admin@tugimnasio.com" required
+            style={{ marginBottom:16 }}/>
 
-          {/* Email */}
-          <div style={{ marginBottom:16 }}>
-            <label style={{
-              display:"block", fontSize:11, color:"#94a3b8",
-              fontWeight:700, letterSpacing:"1px", marginBottom:8,
-            }}>EMAIL</label>
-            <input
-              className="login-input"
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="admin@tugimnasio.com"
-              required
-            />
+          <label style={{ display:"block", fontSize:11, color:"#94a3b8", fontWeight:700, letterSpacing:"1px", marginBottom:8 }}>CONTRASEÑA</label>
+          <div style={{ position:"relative", marginBottom:28 }}>
+            <input className="login-input" type={showPass?"text":"password"} value={password}
+              onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required
+              style={{ paddingRight:46 }}/>
+            <button type="button" className="show-pass-btn" onClick={()=>setShowPass(v=>!v)} tabIndex={-1}>
+              {showPass?"🙈":"👁️"}
+            </button>
           </div>
 
-          {/* Contraseña */}
-          <div style={{ marginBottom:28 }}>
-            <label style={{
-              display:"block", fontSize:11, color:"#94a3b8",
-              fontWeight:700, letterSpacing:"1px", marginBottom:8,
-            }}>CONTRASEÑA</label>
-            <div style={{ position:"relative" }}>
-              <input
-                className="login-input"
-                type={showPass ? "text" : "password"}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                style={{ paddingRight:46 }}
-              />
-              <button
-                type="button"
-                className="show-pass-btn"
-                onClick={() => setShowPass(v => !v)}
-                tabIndex={-1}
-              >
-                {showPass ? "🙈" : "👁️"}
-              </button>
-            </div>
-          </div>
-
-          {/* Botón */}
-          <button
-            type="submit"
-            className="login-btn"
-            disabled={loading || !email || !password}
-          >
+          <button type="submit" className="login-btn" disabled={loading||!email||!password}>
             {loading ? (
               <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
                 <span style={{ animation:"shimmer 1s infinite" }}>⏳</span>
@@ -169,17 +135,11 @@ export default function Login() {
               </span>
             ) : "Iniciar Sesión →"}
           </button>
-
         </form>
 
-        {/* Footer */}
-        <div style={{
-          textAlign:"center", marginTop:24,
-          color:"#cbd5e1", fontSize:11, fontWeight:500,
-        }}>
-          GymOS · KI Technologies
+        <div style={{ textAlign:"center", marginTop:24, color:"#cbd5e1", fontSize:11, fontWeight:500 }}>
+          GymTactik · KI Technologies
         </div>
-
       </div>
     </div>
   );

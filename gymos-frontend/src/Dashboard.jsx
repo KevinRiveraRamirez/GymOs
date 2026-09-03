@@ -784,7 +784,7 @@ function CashReportModal({ onClose }) {
     const sinpe=report.byMethod.find(m=>m.method==="SINPE"), efect=report.byMethod.find(m=>m.method==="Efectivo");
     const W=210,pad=20; let y=0;
     doc.setFillColor(5,150,105); doc.rect(0,0,W,38,"F");
-    doc.setTextColor(255,255,255); doc.setFontSize(20); doc.setFont("helvetica","bold"); doc.text("GymOS",pad,16);
+    doc.setTextColor(255,255,255); doc.setFontSize(20); doc.setFont("helvetica","bold"); doc.text("GymTactik",pad,16);
     doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(209,250,229);
     doc.text(`Cierre de Caja — ${periodLabel}`,pad,24); doc.text(`Generado: ${dateStr} ${timeStr}`,pad,31); y=50;
     doc.setFillColor(240,253,244); doc.setDrawColor(134,239,172); doc.roundedRect(pad,y,W-pad*2,32,4,4,"FD");
@@ -805,7 +805,7 @@ function CashReportModal({ onClose }) {
     y+=30;
     report.byPlan.forEach(p=>{ doc.setFillColor(241,245,249); doc.roundedRect(pad,y,W-pad*2,12,2,2,"F"); doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(71,85,105); doc.text(p.plan,pad+5,y+8); doc.setFont("helvetica","normal"); doc.text(`${p.count} pagos`,W/2,y+8,{align:"center"}); doc.setFont("helvetica","bold"); doc.setTextColor(30,41,59); doc.text(fmtMoneyPDF(p.total),W-pad-5,y+8,{align:"right"}); y+=15; });
     y=Math.max(y+10,260); doc.setDrawColor(226,232,240); doc.line(pad,y,W-pad,y); y+=6;
-    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(148,163,184); doc.text("GymOS · KI Technologies · Reporte generado automáticamente",W/2,y,{align:"center"});
+    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(148,163,184); doc.text("GymTactik · KI Technologies · Reporte generado automáticamente",W/2,y,{align:"center"});
     doc.save(`cierre-caja-${periodLabel.toLowerCase()}-${fileDate}.pdf`);
   };
   return (
@@ -1352,7 +1352,7 @@ export default function Dashboard() {
                 display:"flex", alignItems:"center", justifyContent:"center",
                 fontSize:20, boxShadow:"0 4px 12px rgba(99,102,241,0.3)" }}>💪</div>
               <div>
-                <div style={{ fontWeight:900, fontSize:15, color:T.text, letterSpacing:"-0.3px" }}>GymOS</div>
+                <div style={{ fontWeight:900, fontSize:15, color:T.text, letterSpacing:"-0.3px" }}>GymTactik</div>
                 <div style={{ fontSize:10, color:T.text3, fontWeight:500 }}>{user?.gym?.name}</div>
               </div>
             </div>
