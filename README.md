@@ -1,6 +1,5 @@
 <div align="center">
-  <img src="./gymtactik-logo-original-transparente.png" alt="GymTactik" width="420" />
-
+  <img src="./gymtactik-logo-original-transparente2.png" alt="GymTactik" width="420" />
   <h1>GymTactik</h1>
   <p><strong>Gestiona. Analiza. Crece.</strong></p>
   <p>Plataforma SaaS multi-tenant para administrar gimnasios de forma simple, centralizada y basada en datos.</p>
