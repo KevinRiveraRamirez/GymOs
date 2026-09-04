@@ -18,8 +18,10 @@ app.set('trust proxy', 1);
 // ─── MIDDLEWARES ──────────────────────────────────────────────────────────────
 app.use(cors({
   origin: function(origin, callback) {
-    const allowed = [
+   const allowed = [
   "https://gym-os-qtw7.vercel.app",
+  "https://app.gymtactik.com",
+  "https://kiosko.gymtactik.com",
   "https://gymos-production.up.railway.app",
   "http://localhost:5173",
   process.env.FRONTEND_URL
