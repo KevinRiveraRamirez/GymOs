@@ -1334,10 +1334,10 @@ export default function Dashboard() {
       <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
         <input placeholder="🔍  Nombre, cédula o teléfono..." value={search} onChange={e=>setSearch(e.target.value)}
           style={{ flex:1, minWidth:180, background:T.surface, border:`2px solid ${T.border}`, borderRadius:12, padding:"10px 14px", color:T.text, fontSize:13, outline:"none", fontFamily:"inherit" }}/>
-        {["all","active","overdue","inactive","blocked"].map(s=>(
+        {["all","active","overdue","blocked"].map(s=>(
           <button key={s} onClick={()=>setFilterStatus(s)} style={{ padding:"8px 14px", borderRadius:10, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
             border:`2px solid ${filterStatus===s?T.accent:T.border}`, background:filterStatus===s?T.accentBg:T.surface, color:filterStatus===s?T.accent:T.text2 }}>
-            {{all:"Todos",active:"Activos",overdue:"Vencidos",inactive:"Inactivos",blocked:"Bloqueados"}[s]}
+            {{all:"Todos",active:"Activos",overdue:"Vencidos",blocked:"Bloqueados"}[s]}
           </button>
         ))}
         <select value={filterPlan} onChange={e=>setFilterPlan(e.target.value)} style={{ background:T.surface, border:`2px solid ${T.border}`, borderRadius:10, padding:"8px 12px", color:T.text2, fontSize:11, outline:"none", fontFamily:"inherit" }}>
