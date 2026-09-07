@@ -1138,7 +1138,7 @@ export default function Dashboard() {
   const loadMembers = useCallback(async()=>{
     setLoadingData(true);
     try {
-      const p = new URLSearchParams({ limit:300 });
+      const p = new URLSearchParams({ limit:1000 });
       if(search) p.set("search",search);
       if(filterStatus!=="all") p.set("status",filterStatus);
       if(filterPlan!=="all") p.set("plan",filterPlan);

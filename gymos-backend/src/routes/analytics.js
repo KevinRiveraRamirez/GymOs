@@ -12,12 +12,14 @@ router.get("/overview", async (req, res) => {
   const gymId = req.user.gymId;
   try {
     const [membersRes, revenueRes, attendanceTodayRes, attendanceAvgRes, newMembersRes, churnRes] = await Promise.all([
+
+      // Usar expires_at y blocked en vez del campo status guardado
       pool.query(`
         SELECT
-          COUNT(*) FILTER (WHERE status='active'  AND NOT blocked) AS active,
-          COUNT(*) FILTER (WHERE status='overdue' AND NOT blocked) AS overdue,
-          COUNT(*) FILTER (WHERE blocked)                          AS blocked,
-          COUNT(*)                                                  AS total
+          COUNT(*) FILTER (WHERE blocked = false AND expires_at >= ${CR_TODAY}) AS active,
+          COUNT(*) FILTER (WHERE blocked = false AND expires_at <  ${CR_TODAY}) AS overdue,
+          COUNT(*) FILTER (WHERE blocked = true)                                AS blocked,
+          COUNT(*)                                                               AS total
         FROM members WHERE gym_id=$1
       `, [gymId]),
 
@@ -31,7 +33,6 @@ router.get("/overview", async (req, res) => {
         FROM payments WHERE gym_id=$1
       `, [gymId]),
 
-      // Asistencia hoy — query separada
       pool.query(`
         SELECT COUNT(*) AS today
         FROM attendance
@@ -40,7 +41,6 @@ router.get("/overview", async (req, res) => {
           AND type != 'denied'
       `, [gymId]),
 
-      // Promedio últimos 30 días — query separada
       pool.query(`
         SELECT COALESCE(ROUND(AVG(daily_count)), 0) AS avg_30
         FROM (
@@ -235,19 +235,22 @@ router.get("/members", async (req, res) => {
         ORDER BY month_date ASC
       `, [gymId]),
 
+      // Distribución por plan — usar expires_at para activos reales
       pool.query(`
         SELECT plan, COUNT(*) AS count
         FROM members
-        WHERE gym_id=$1 AND status='active' AND NOT blocked
+        WHERE gym_id=$1
+          AND blocked = false
+          AND expires_at >= ${CR_TODAY}
         GROUP BY plan ORDER BY count DESC
       `, [gymId]),
 
+      // Estado real basado en expires_at
       pool.query(`
         SELECT
-          COUNT(*) FILTER (WHERE status='active'  AND NOT blocked) AS active,
-          COUNT(*) FILTER (WHERE status='overdue' AND NOT blocked) AS overdue,
-          COUNT(*) FILTER (WHERE status='inactive')                AS inactive,
-          COUNT(*) FILTER (WHERE blocked)                          AS blocked
+          COUNT(*) FILTER (WHERE blocked = false AND expires_at >= ${CR_TODAY}) AS active,
+          COUNT(*) FILTER (WHERE blocked = false AND expires_at <  ${CR_TODAY}) AS overdue,
+          COUNT(*) FILTER (WHERE blocked = true)                                AS blocked
         FROM members WHERE gym_id=$1
       `, [gymId]),
 
@@ -276,7 +279,7 @@ router.get("/members", async (req, res) => {
       byStatus: {
         active:   Number(s.active),
         overdue:  Number(s.overdue),
-        inactive: Number(s.inactive),
+        inactive: 0,
         blocked:  Number(s.blocked),
       },
       topAttendees: topRes.rows.map(r => ({
