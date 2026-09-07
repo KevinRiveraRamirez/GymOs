@@ -17,7 +17,7 @@ const expiresDate = (plan, joinedAt) => {
 const STATUS_EXPR = `
   CASE
     WHEN blocked = true THEN 'blocked'
-    WHEN expires_at < CURRENT_DATE THEN 'inactive'
+    WHEN expires_at < CURRENT_DATE THEN 'overdue'
     ELSE 'active'
   END
 `;
@@ -46,6 +46,8 @@ router.get("/", async (req, res) => {
         conditions.push(`blocked = true`);
       } else if (status === "active") {
         conditions.push(`blocked = false AND expires_at >= CURRENT_DATE`);
+      } else if (status === "overdue") {
+        conditions.push(`blocked = false AND expires_at < CURRENT_DATE`);
       } else if (status === "inactive") {
         conditions.push(`blocked = false AND expires_at < CURRENT_DATE`);
       }
@@ -246,6 +248,7 @@ router.delete("/:id", adminOnly, async (req, res) => {
   }
 });
 
+// ── GET /api/members/:id/payments ────────────────────────────────────────────
 router.get("/:id/payments", async (req, res) => {
   const gymId = req.user.gymId;
   try {
@@ -255,9 +258,12 @@ router.get("/:id/payments", async (req, res) => {
       ORDER BY paid_at DESC, id DESC
     `, [gymId, req.params.id]);
     res.json(result.rows);
-  } catch(err) { res.status(500).json({ error:"Error al obtener pagos del miembro" }); }
+  } catch(err) {
+    res.status(500).json({ error: "Error al obtener pagos del miembro" });
+  }
 });
 
+// ── GET /api/members/:id/attendance ──────────────────────────────────────────
 router.get("/:id/attendance", async (req, res) => {
   const gymId = req.user.gymId;
   const { month, year } = req.query;
@@ -270,7 +276,9 @@ router.get("/:id/attendance", async (req, res) => {
       ORDER BY date DESC, attended_at DESC
     `, [gymId, req.params.id, parseInt(month), parseInt(year)]);
     res.json(result.rows);
-  } catch(err) { res.status(500).json({ error:"Error al obtener asistencia del miembro" }); }
+  } catch(err) {
+    res.status(500).json({ error: "Error al obtener asistencia del miembro" });
+  }
 });
 
 module.exports = router;
