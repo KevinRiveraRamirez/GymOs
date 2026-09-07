@@ -24,7 +24,7 @@ const STATUS_EXPR = `
 
 // ── GET /api/members ─────────────────────────────────────────────────────────
 router.get("/", async (req, res) => {
-  const { search = "", status = "all", plan = "all", page = 1, limit = 50 } = req.query;
+  const { search = "", status = "all", plan = "all", page = 1, limit = 1000 } = req.query;
   const gymId = req.user.gymId;
   const offset = (parseInt(page) - 1) * parseInt(limit);
 
